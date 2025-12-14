@@ -31,7 +31,7 @@ func main() {
 	mysqlUserPwd := os.Getenv("MYSQL_PASSWORD")
 	mysqlDatabase := os.Getenv("MYSQL_DATABASE")
 	mysqlHost := os.Getenv("MYSQL_HOST")
-	dsn := fmt.Sprintf("%s:%s@tcp(127.0.0.1:3306)/%s", mysqlUser, mysqlUserPwd, mysqlHost, mysqlDatabase)
+	dsn := fmt.Sprintf("%s:%s@%s/%s?parseTime=true", mysqlUser, mysqlUserPwd, mysqlHost, mysqlDatabase)
 
 	db, err = sql.Open("mysql", dsn)
 	if err != nil {
@@ -73,7 +73,12 @@ func main() {
 	closeDBWithSysCall()
 
 	// サーバー起動
-	log.Println("Listening on :8000...")
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8000" // ローカルで動かすとき用
+	}
+
+	log.Printf("Listening on :%s...", port)
 	if err := http.ListenAndServe(":8000", nil); err != nil {
 		log.Fatal(err)
 	}
