@@ -1,5 +1,7 @@
-### GET request to example server
-GET https://examples.http-client.intellij.net/get
-    ?generated-in=GoLand
+POST http://localhost:8000/user
+Content-Type: application/json
 
-###
+{
+  "name" : "ichiro",
+  "age" : 40
+}
