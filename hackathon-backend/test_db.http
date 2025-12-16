@@ -1,4 +1,4 @@
-POST http://localhost:8000/user
+POST https://hackathon-backend-80731441408.europe-west1.run.app/user
 Content-Type: application/json
 
 {
