@@ -60,7 +60,7 @@ func main() {
 	registerUsecase := usecase.NewRegisterUserUsecase(userDAO)
 	searchUsecase := usecase.NewSearchUserUsecase(userDAO)
 	registerController := controller.NewRegisterUserController(registerUsecase, authClient)
-	searchController := controller.NewSearchUserController(searchUsecase)
+	searchController := controller.NewSearchUserController(searchUsecase, authClient)
 	// --- 3. ルーティング設定 ---
 	// 単一のエンドポイントでメソッドによって振り分ける場合
 	http.HandleFunc("/users", func(w http.ResponseWriter, r *http.Request) {
@@ -77,6 +77,23 @@ func main() {
 		default:
 			log.Printf("fail: HTTP Method is %s\n", r.Method)
 			w.WriteHeader(http.StatusBadRequest)
+		}
+	})
+
+	http.HandleFunc("/users/me", func(w http.ResponseWriter, r *http.Request) {
+		// CORS設定は/usersと同じものを適用
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+		if r.Method == "OPTIONS" {
+			return
+		}
+
+		if r.Method == http.MethodGet {
+			// ★ SearchControllerのGetMeメソッドを呼び出す
+			searchController.GetMe(w, r)
+		} else {
+			log.Printf("fail: HTTP Method is %s on /users/me\n", r.Method)
+			w.WriteHeader(http.StatusMethodNotAllowed)
 		}
 	})
 

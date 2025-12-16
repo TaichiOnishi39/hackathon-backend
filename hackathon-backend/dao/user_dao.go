@@ -33,6 +33,26 @@ func (dao *UserDao) FindByName(name string) ([]model.UserResForHTTPGet, error) {
 	return users, nil
 }
 
+func (dao *UserDao) GetUserByFirebaseUID(firebaseUID string) (*model.User, error) {
+	var user model.User
+
+	// 1件だけ取得するので QueryRow を使います
+	// MySQLのようなのでプレースホルダは ? のままでOKです
+	row := dao.DB.QueryRow("SELECT id, name, firebase_uid FROM users WHERE firebase_uid = ?", firebaseUID)
+
+	if err := row.Scan(&user.Id, &user.Name, &user.FirebaseUID); err != nil {
+		if err == sql.ErrNoRows {
+			// ユーザーが見つからない場合は nil, nil を返す設計にします
+			// (呼び出し元の Usecase や Controller で 404 エラーにするため)
+			return nil, nil
+		}
+		// その他のDBエラー
+		return nil, fmt.Errorf("fail: row.Scan, %v", err)
+	}
+
+	return &user, nil
+}
+
 func (dao *UserDao) RegisterUser(ulid string, firebaseUID string, name string) (*model.User, error) {
 	tx, err := dao.DB.Begin()
 	if err != nil {
