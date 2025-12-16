@@ -63,7 +63,7 @@ func main() {
 	searchController := controller.NewSearchUserController(searchUsecase)
 	// --- 3. ルーティング設定 ---
 	// 単一のエンドポイントでメソッドによって振り分ける場合
-	http.HandleFunc("/user", func(w http.ResponseWriter, r *http.Request) {
+	http.HandleFunc("/users", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Access-Control-Allow-Origin", "*")
 		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
 		if r.Method == "OPTIONS" {
