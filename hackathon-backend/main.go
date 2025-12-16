@@ -87,7 +87,6 @@ func main() {
 		if r.Method == "OPTIONS" {
 			return
 		}
-
 		if r.Method == http.MethodGet {
 			// ★ SearchControllerのGetMeメソッドを呼び出す
 			searchController.GetMe(w, r)

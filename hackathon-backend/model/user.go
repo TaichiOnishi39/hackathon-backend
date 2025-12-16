@@ -30,7 +30,7 @@ type UserResForHTTPPost struct {
 	FirebaseUID string `json:"firebase_uid"`
 }
 type User struct {
-	Id          string
-	Name        string
-	FirebaseUID string
+	Id          string `json:"id"`
+	Name        string `json:"name"`
+	FirebaseUID string `json:"firebase_uid"`
 }

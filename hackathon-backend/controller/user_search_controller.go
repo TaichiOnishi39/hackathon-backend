@@ -6,8 +6,9 @@ import (
 	"net/http"
 	"strings"
 
-	"firebase.google.com/go/auth"
 	"hackathon-backend/usecase"
+
+	"firebase.google.com/go/auth"
 )
 
 type SearchUserController struct {
@@ -60,17 +61,23 @@ func (c *SearchUserController) GetMe(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusUnauthorized)
 		return
 	}
+	// ★★★ デバッグログその1: 検証後のUID確認 ★★★
+	firebaseUID := token.UID
+	log.Printf("DEBUG: Verified UID: %s", firebaseUID)
 
 	// 3. Usecase経由でDB検索 (token.UIDを使う)
 	user, err := c.Usecase.GetUserByFirebaseUID(token.UID)
 	if err != nil {
-		log.Printf("fail: GetUserByFirebaseUID, %v\n", err)
+		// ★★★ デバッグログその2: DBエラー確認 ★★★
+		log.Printf("ERROR: GetUserByFirebaseUID failed for UID %s: %v\n", token.UID, err)
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
 	// 4. ユーザーがいなかった場合 (404)
 	if user == nil {
+		// ★★★ デバッグログその3: ユーザー未登録として扱われている ★★★
+		log.Printf("INFO: User not found in DB for UID: %s (Returning 404)", token.UID)
 		w.WriteHeader(http.StatusNotFound)
 		return
 	}
