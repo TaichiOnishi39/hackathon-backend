@@ -18,10 +18,10 @@ func NewRegisterUserUsecase(d *dao.UserDao) *RegisterUserUsecase {
 	return &RegisterUserUsecase{UserDao: d}
 }
 
-func (u *RegisterUserUsecase) RegisterUser(req model.UserReqForHTTPPost) (string, error) {
+func (u *RegisterUserUsecase) RegisterUser(req model.UserReqForHTTPPost, firebaseUID string) (*model.UserResForHTTPPost, error) {
 	// バリデーションロジック
 	if err := req.Validate(); err != nil {
-		return "", err
+		return nil, err
 	}
 	// ID生成ロジック
 	t := time.Now()
@@ -30,10 +30,14 @@ func (u *RegisterUserUsecase) RegisterUser(req model.UserReqForHTTPPost) (string
 	newIDStr := newID.String()
 
 	// DAOを呼び出して保存
-	err := u.UserDao.Insert(newIDStr, req.Name, req.Age)
+	userEntity, err := u.UserDao.RegisterUser(newIDStr, firebaseUID, req.Name)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
-	return newIDStr, nil
+	return &model.UserResForHTTPPost{
+		Id:          userEntity.Id,
+		Name:        userEntity.Name,
+		FirebaseUID: userEntity.FirebaseUID,
+	}, nil
 }

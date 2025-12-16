@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"log"
@@ -9,9 +10,9 @@ import (
 	"os/signal"
 	"syscall"
 
+	firebase "firebase.google.com/go"
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/joho/godotenv"
-
 	// 各パッケージをインポート (module名は適宜書き換えてください)
 	"hackathon-backend/controller"
 	"hackathon-backend/dao"
@@ -43,21 +44,31 @@ func main() {
 	}
 	log.Println("Successfully connected to the database!")
 
-	// --- 2. 依存関係の注入 (DI) ---
-	// DAOの初期化
+	// --- Firebase初期化 (追加) ---
+	ctx := context.Background()
+	conf := &firebase.Config{ProjectID: "term8-taichi-onishi"}
+	app, err := firebase.NewApp(ctx, conf)
+	if err != nil {
+		log.Fatalf("error initializing app: %v\n", err)
+	}
+	authClient, err := app.Auth(context.Background())
+	if err != nil {
+		log.Fatalf("error initializing auth client: %v\n", err)
+	}
+
 	userDAO := dao.NewUserDao(db)
-
-	// Usecaseの初期化
-	searchUsecase := usecase.NewSearchUserUsecase(userDAO)
 	registerUsecase := usecase.NewRegisterUserUsecase(userDAO)
-
-	// Controllerの初期化
+	searchUsecase := usecase.NewSearchUserUsecase(userDAO)
+	registerController := controller.NewRegisterUserController(registerUsecase, authClient)
 	searchController := controller.NewSearchUserController(searchUsecase)
-	registerController := controller.NewRegisterUserController(registerUsecase)
-
 	// --- 3. ルーティング設定 ---
 	// 単一のエンドポイントでメソッドによって振り分ける場合
 	http.HandleFunc("/user", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+		if r.Method == "OPTIONS" {
+			return
+		}
 		switch r.Method {
 		case http.MethodGet:
 			searchController.Handle(w, r)

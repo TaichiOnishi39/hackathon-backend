@@ -1,45 +1,56 @@
 package controller
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
-	"io"
 	"log"
 	"net/http"
+	"strings"
 
 	"hackathon-backend/model"
 	"hackathon-backend/usecase"
+
+	"firebase.google.com/go/auth"
 )
 
 type RegisterUserController struct {
-	Usecase *usecase.RegisterUserUsecase
+	Usecase    *usecase.RegisterUserUsecase
+	AuthClient *auth.Client
 }
 
-func NewRegisterUserController(u *usecase.RegisterUserUsecase) *RegisterUserController {
-	return &RegisterUserController{Usecase: u}
+func NewRegisterUserController(u *usecase.RegisterUserUsecase, auth *auth.Client) *RegisterUserController {
+	return &RegisterUserController{Usecase: u, AuthClient: auth}
 }
 
 func (c *RegisterUserController) Handle(w http.ResponseWriter, r *http.Request) {
-	body, err := io.ReadAll(r.Body)
-	if err != nil {
-		log.Printf("fail: io.ReadAll, %v\n", err)
-		w.WriteHeader(http.StatusInternalServerError)
+	authHeader := r.Header.Get("Authorization")
+	idToken := strings.Replace(authHeader, "Bearer ", "", 1)
+	if idToken == "" {
+		log.Println("fail: No token provided")
+		w.WriteHeader(http.StatusUnauthorized)
 		return
 	}
 
+	token, err := c.AuthClient.VerifyIDToken(context.Background(), idToken)
+	if err != nil {
+		log.Printf("fail: Invalid token, %v\n", err)
+		w.WriteHeader(http.StatusUnauthorized)
+		return
+	}
+	firebaseUID := token.UID
+
 	var reqBody model.UserReqForHTTPPost
-	if err := json.Unmarshal(body, &reqBody); err != nil {
-		log.Printf("fail: json.Unmarshal, %v\n", err)
+	if err := json.NewDecoder(r.Body).Decode(&reqBody); err != nil {
+		log.Printf("fail: json.NewDecoder, %v\n", err)
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
 	// Usecase実行
-	newIDStr, err := c.Usecase.RegisterUser(reqBody)
+	resUser, err := c.Usecase.RegisterUser(reqBody, firebaseUID)
 	if err != nil {
-		// エラー内容に応じてステータスコードを分ける簡易実装
-		if err.Error() == "name is empty or too long" || err.Error() == "age must be between 20 and 80" {
-			log.Printf("fail: validation, %v\n", err)
+		if err.Error() == "name is empty" || strings.Contains(err.Error(), "too long") {
 			w.WriteHeader(http.StatusBadRequest)
 			fmt.Fprintln(w, err.Error())
 			return
@@ -49,15 +60,7 @@ func (c *RegisterUserController) Handle(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	resBody := model.UserResForHTTPPost{Id: newIDStr}
-	bytes, err := json.Marshal(resBody)
-	if err != nil {
-		log.Printf("fail: json.Marshal, %v\n", err)
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	w.Write(bytes)
+	json.NewEncoder(w).Encode(resUser)
 }
