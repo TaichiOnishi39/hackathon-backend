@@ -10,6 +10,7 @@ import (
 	"os/signal"
 	"syscall"
 
+	"cloud.google.com/go/storage"
 	firebase "firebase.google.com/go"
 	"firebase.google.com/go/auth"
 	_ "github.com/go-sql-driver/mysql"
@@ -18,6 +19,7 @@ import (
 	"hackathon-backend/controller"
 	"hackathon-backend/dao"
 	"hackathon-backend/router"
+	"hackathon-backend/service"
 	"hackathon-backend/usecase"
 )
 
@@ -29,8 +31,19 @@ func main() {
 
 	db := initDB()
 	defer db.Close()
-	// --- Firebase初期化 (追加) ---
+	// --- Firebase初期化 ---
 	authClient := initFirebase()
+
+	// --- GCS初期化  ---
+	ctx := context.Background()
+	gcsClient, err := storage.NewClient(ctx)
+	if err != nil {
+		log.Fatalf("fail: storage.NewClient, %v", err)
+	}
+	defer gcsClient.Close()
+
+	bucketName := os.Getenv("GCS_BUCKET_NAME")
+	storageService := service.NewStorageService(gcsClient, bucketName)
 
 	//DAO
 	userDAO := dao.NewUserDao(db)
@@ -39,8 +52,8 @@ func main() {
 	//Usecase
 	registerUsecase := usecase.NewRegisterUserUsecase(userDAO)
 	searchUsecase := usecase.NewSearchUserUsecase(userDAO)
-	productRegisterUsecase := usecase.NewProductRegisterUsecase(productDAO, userDAO)
-	productSearchUsecase := usecase.NewProductSearchUsecase(productDAO)
+	productRegisterUsecase := usecase.NewProductRegisterUsecase(productDAO, userDAO, storageService)
+	productSearchUsecase := usecase.NewProductSearchUsecase(productDAO, storageService)
 	productDeleteUsecase := usecase.NewProductDeleteUsecase(productDAO, userDAO)
 	productUpdateUsecase := usecase.NewProductUpdateUsecase(productDAO, userDAO)
 

@@ -15,8 +15,8 @@ func NewProductDAO(db *sql.DB) *ProductDao {
 
 func (d *ProductDao) Create(product *model.Product) error {
 	query := `
-		INSERT INTO products (id, name, price, description, user_id) 
-		VALUES (?, ?, ?, ?, ?)
+		INSERT INTO products (id, name, price, description, user_id, image_url) 
+		VALUES (?, ?, ?, ?, ?, ?)
 	`
 	_, err := d.db.Exec(
 		query,
@@ -25,6 +25,7 @@ func (d *ProductDao) Create(product *model.Product) error {
 		product.Price,
 		product.Description,
 		product.UserID,
+		product.ImageURL,
 	)
 	return err
 }
@@ -37,6 +38,7 @@ func (d *ProductDao) FindAll() ([]*model.Product, error) {
 			p.price, 
 			p.description, 
 			p.user_id, 
+			p.image_url,
 			p.created_at,
 			u.name as user_name 
 		FROM products p
@@ -52,7 +54,7 @@ func (d *ProductDao) FindAll() ([]*model.Product, error) {
 	var products []*model.Product
 	for rows.Next() {
 		p := &model.Product{}
-		err := rows.Scan(&p.ID, &p.Name, &p.Price, &p.Description, &p.UserID, &p.CreatedAt, &p.UserName)
+		err := rows.Scan(&p.ID, &p.Name, &p.Price, &p.Description, &p.UserID, &p.ImageURL, &p.CreatedAt, &p.UserName)
 		if err != nil {
 			return nil, err
 		}
@@ -61,7 +63,7 @@ func (d *ProductDao) FindAll() ([]*model.Product, error) {
 	return products, nil
 }
 
-func (d *ProductDao) SearchByName(keyword string) ([]*model.Product, error) {
+func (d *ProductDao) FindByName(keyword string) ([]*model.Product, error) {
 	// ユーザー名も取得したいのでJOINします
 	// WHERE p.name LIKE ? を追加
 	query := `
@@ -70,7 +72,8 @@ func (d *ProductDao) SearchByName(keyword string) ([]*model.Product, error) {
 			p.name, 
 			p.price, 
 			p.description, 
-			p.user_id, 
+			p.user_id,
+			p.image_url,
 			p.created_at,
 			u.name 
 		FROM products p
@@ -91,7 +94,7 @@ func (d *ProductDao) SearchByName(keyword string) ([]*model.Product, error) {
 	for rows.Next() {
 		p := &model.Product{}
 		err := rows.Scan(
-			&p.ID, &p.Name, &p.Price, &p.Description, &p.UserID, &p.CreatedAt, &p.UserName,
+			&p.ID, &p.Name, &p.Price, &p.Description, &p.UserID, &p.ImageURL, &p.CreatedAt, &p.UserName,
 		)
 		if err != nil {
 			return nil, err
@@ -101,7 +104,7 @@ func (d *ProductDao) SearchByName(keyword string) ([]*model.Product, error) {
 	return products, nil
 }
 
-func (d *ProductDao) DeleteProduct(productID string, userID string) error {
+func (d *ProductDao) Delete(productID string, userID string) error {
 	// user_id も条件に入れることで、他人の商品を消せないようにする
 	query := "DELETE FROM products WHERE id = ? AND user_id = ?"
 	result, err := d.db.Exec(query, productID, userID)
@@ -124,7 +127,7 @@ func (d *ProductDao) DeleteProduct(productID string, userID string) error {
 	return nil
 }
 
-func (d *ProductDao) UpdateProduct(productID string, userID string, name string, price int, description string) error {
+func (d *ProductDao) Update(productID string, userID string, name string, price int, description string) error {
 	// user_id も条件に入れることで、他人の商品を更新できないようにする
 	query := `
 		UPDATE products 

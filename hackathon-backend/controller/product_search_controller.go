@@ -23,7 +23,7 @@ func NewProductSearchController(u *usecase.ProductSearchUsecase, auth *auth.Clie
 func (c *ProductSearchController) HandleListProducts(w http.ResponseWriter, r *http.Request) {
 	keyword := r.URL.Query().Get("q")
 	// Usecase から商品一覧を取得
-	products, err := c.Usecase.SearchProducts(keyword)
+	products, err := c.Usecase.SearchProduct(keyword)
 	if err != nil {
 		c.respondError(w, http.StatusInternalServerError, err)
 		return

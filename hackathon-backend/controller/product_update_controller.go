@@ -47,7 +47,7 @@ func (c *ProductUpdateController) HandleUpdateProduct(w http.ResponseWriter, r *
 	}
 
 	// 4. 更新実行
-	updatedProduct, err := c.Usecase.Execute(
+	updatedProduct, err := c.Usecase.UpdateProduct(
 		productID,
 		firebaseUID,
 		req.Name,

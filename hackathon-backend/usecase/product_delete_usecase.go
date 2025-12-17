@@ -29,5 +29,5 @@ func (u *ProductDeleteUsecase) DeleteProduct(productID, firebaseUID string) erro
 	}
 
 	// 2. 商品を削除（自分のものかどうかのチェックはDAOで行われる）
-	return u.ProductDAO.DeleteProduct(productID, user.ID)
+	return u.ProductDAO.Delete(productID, user.ID)
 }

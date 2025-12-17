@@ -18,8 +18,8 @@ func NewProductUpdateUsecase(pDAO *dao.ProductDao, uDAO *dao.UserDao) *ProductUp
 	}
 }
 
-// Execute は商品を更新します
-func (u *ProductUpdateUsecase) Execute(productID, firebaseUID, name, description string, price int) (*model.Product, error) {
+// UpdateProduct は商品を更新します
+func (u *ProductUpdateUsecase) UpdateProduct(productID, firebaseUID, name, description string, price int) (*model.Product, error) {
 	// 1. Firebase UID から User ULID を特定
 	user, err := u.UserDAO.FindByFirebaseUID(firebaseUID)
 	if err != nil {
@@ -30,7 +30,7 @@ func (u *ProductUpdateUsecase) Execute(productID, firebaseUID, name, description
 	}
 
 	// 2. 更新実行
-	err = u.ProductDAO.UpdateProduct(productID, user.ID, name, price, description)
+	err = u.ProductDAO.Update(productID, user.ID, name, price, description)
 	if err != nil {
 		return nil, err
 	}

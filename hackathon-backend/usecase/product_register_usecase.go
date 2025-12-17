@@ -1,30 +1,35 @@
 package usecase
 
 import (
+	"context"
 	"errors"
+	"io"
 	"math/rand"
 	"time"
 
 	"hackathon-backend/dao"
 	"hackathon-backend/model"
+	"hackathon-backend/service"
 
 	"github.com/oklog/ulid/v2"
 )
 
 type ProductRegisterUsecase struct {
-	ProductDAO *dao.ProductDao
-	UserDAO    *dao.UserDao
+	ProductDAO     *dao.ProductDao
+	UserDAO        *dao.UserDao
+	StorageService *service.StorageService
 }
 
-func NewProductRegisterUsecase(pDAO *dao.ProductDao, uDAO *dao.UserDao) *ProductRegisterUsecase {
+func NewProductRegisterUsecase(pDAO *dao.ProductDao, uDAO *dao.UserDao, sService *service.StorageService) *ProductRegisterUsecase {
 	return &ProductRegisterUsecase{
-		ProductDAO: pDAO,
-		UserDAO:    uDAO,
+		ProductDAO:     pDAO,
+		UserDAO:        uDAO,
+		StorageService: sService,
 	}
 }
 
-// Execute が商品登録のメインロジックです
-func (u *ProductRegisterUsecase) RegisterProduct(firebaseUID, name, description string, price int) (*model.Product, error) {
+// UpdateProduct が商品登録のメインロジックです
+func (u *ProductRegisterUsecase) RegisterProduct(firebaseUID, name, description string, price int, imageFile io.Reader, imageFilename string) (*model.Product, error) {
 	// 1. Firebase UID から内部の User ULID を検索する
 	// ※UserDAO に FindByFirebaseUID(uid string) (*model.User, error) がある前提です
 	user, err := u.UserDAO.FindByFirebaseUID(firebaseUID)
@@ -32,18 +37,38 @@ func (u *ProductRegisterUsecase) RegisterProduct(firebaseUID, name, description 
 		return nil, errors.New("ユーザーが見つかりませんでした")
 	}
 
+	// ★追加: 画像のバリデーション
+	if imageFile == nil || imageFilename == "" {
+		return nil, errors.New("image is required")
+	}
+
 	// 2. 商品の ULID を生成する
 	t := time.Now()
 	entropy := ulid.Monotonic(rand.New(rand.NewSource(t.UnixNano())), 0)
 	productID := ulid.MustNew(ulid.Timestamp(t), entropy).String()
 
-	// 3. 保存用のモデルを作成する
+	// 3. 画像アップロード (ファイルがある場合のみ)
+	var storedImageName string
+
+	// ファイル名が重複しないようにIDをプレフィックスにつける
+	// 例: products/01HXYZ..._cat.jpg
+	uploadPath := "products/" + productID + "_" + imageFilename
+
+	ctx := context.Background()
+	path, err := u.StorageService.Upload(ctx, imageFile, uploadPath)
+	if err != nil {
+		return nil, err
+	}
+	storedImageName = path
+
+	//  保存用のモデルを作成する
 	newProduct := &model.Product{
 		ID:          productID,
 		Name:        name,
 		Price:       price,
 		Description: description,
 		UserID:      user.ID, // ここで内部ULIDを紐付け！
+		ImageURL:    storedImageName,
 	}
 
 	// 4. DAO に保存を依頼する
