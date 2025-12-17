@@ -15,6 +15,7 @@ func NewRouter(
 	productUpdateCtrl *controller.ProductUpdateController,
 	productDetailCtrl *controller.ProductDetailController,
 	productPurchaseCtrl *controller.ProductPurchaseController,
+	messageCtrl *controller.MessageController,
 ) http.Handler {
 	mux := http.NewServeMux()
 
@@ -70,11 +71,9 @@ func NewRouter(
 
 	// /products/{id}
 	mux.HandleFunc("/products/{id}", func(w http.ResponseWriter, r *http.Request) {
-		// 1. ここで OPTIONS も含めて CORS を許可する
 		if !enableCORS(w, r) {
 			return
 		}
-		// 2. GET の時だけ処理する
 		if r.Method == http.MethodGet {
 			productDetailCtrl.HandleGetProduct(w, r)
 		} else {
@@ -84,14 +83,26 @@ func NewRouter(
 
 	// /products/{id}/purchase
 	mux.HandleFunc("/products/{id}/purchase", func(w http.ResponseWriter, r *http.Request) {
-		// 1. ここで OPTIONS も含めて CORS を許可する
 		if !enableCORS(w, r) {
 			return
 		}
-		// 2. POST の時だけ処理する
 		if r.Method == http.MethodPost {
 			productPurchaseCtrl.HandlePurchaseProduct(w, r)
 		} else {
+			w.WriteHeader(http.StatusMethodNotAllowed)
+		}
+	})
+
+	mux.HandleFunc("/messages", func(w http.ResponseWriter, r *http.Request) {
+		if !enableCORS(w, r) {
+			return
+		}
+		switch r.Method {
+		case http.MethodPost:
+			messageCtrl.HandleSendMessage(w, r)
+		case http.MethodGet:
+			messageCtrl.HandleGetChat(w, r)
+		default:
 			w.WriteHeader(http.StatusMethodNotAllowed)
 		}
 	})
