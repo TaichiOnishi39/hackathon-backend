@@ -1,10 +1,10 @@
 package controller
 
 import (
-	"encoding/json"
-	"hackathon-backend/model"
 	"hackathon-backend/usecase"
+	"io"
 	"net/http"
+	"strconv"
 
 	"firebase.google.com/go/auth"
 )
@@ -28,18 +28,43 @@ func (c *ProductRegisterController) Handler(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	var reqBody model.ProductReq
-	if err := json.NewDecoder(r.Body).Decode(&reqBody); err != nil {
+	//  multipart/form-data の解析 (最大10MBまでメモリ展開)
+	if err := r.ParseMultipartForm(10 << 20); err != nil {
 		c.respondError(w, http.StatusBadRequest, err)
 		return
 	}
 
-	//  Usecase の実行
+	//  フォームデータの取得
+	name := r.FormValue("name")
+	description := r.FormValue("description")
+	priceStr := r.FormValue("price")
+	// 価格を数値に変換
+	price, err := strconv.Atoi(priceStr)
+	if err != nil {
+		c.respondError(w, http.StatusBadRequest, err)
+		return
+	}
+
+	//  画像ファイルの取得
+	file, header, err := r.FormFile("image") // フロント側で "image" というキーで送る
+	// 画像がない場合も許容するならエラーハンドリングを調整
+	// 今回は「画像なしでもOK」とする場合:
+	var fileReader io.Reader
+	var fileName string
+	if err == nil {
+		defer file.Close()
+		fileReader = file
+		fileName = header.Filename
+	}
+
+	//  Usecase 実行
 	product, err := c.Usecase.RegisterProduct(
 		firebaseUID,
-		reqBody.Name,
-		reqBody.Description,
-		reqBody.Price,
+		name,
+		description,
+		price,
+		fileReader, // 画像データ
+		fileName,   // ファイル名
 	)
 
 	if err != nil {
