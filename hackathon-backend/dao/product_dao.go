@@ -2,6 +2,7 @@ package dao
 
 import (
 	"database/sql"
+	"fmt"
 	"hackathon-backend/model"
 )
 
@@ -38,8 +39,9 @@ func (d *ProductDao) FindAll() ([]*model.Product, error) {
 			p.price, 
 			p.description, 
 			p.user_id, 
-			p.image_url,
+			COALESCE(p.image_url, ''),
 			p.created_at,
+			p.buyer_id,
 			u.name as user_name 
 		FROM products p
 		JOIN users u ON p.user_id = u.id
@@ -54,12 +56,17 @@ func (d *ProductDao) FindAll() ([]*model.Product, error) {
 	var products []*model.Product
 	for rows.Next() {
 		p := &model.Product{}
-		err := rows.Scan(&p.ID, &p.Name, &p.Price, &p.Description, &p.UserID, &p.ImageURL, &p.CreatedAt, &p.UserName)
+		var buyerID sql.NullString // NULL対策
+		err := rows.Scan(&p.ID, &p.Name, &p.Price, &p.Description, &p.UserID, &p.ImageURL, &p.CreatedAt, &buyerID, &p.UserName)
 		if err != nil {
 			return nil, err
 		}
 		products = append(products, p)
+		if buyerID.Valid {
+			p.BuyerID = buyerID.String
+		}
 	}
+
 	return products, nil
 }
 
@@ -73,8 +80,9 @@ func (d *ProductDao) FindByName(keyword string) ([]*model.Product, error) {
 			p.price, 
 			p.description, 
 			p.user_id,
-			p.image_url,
+			COALESCE(p.image_url, ''),
 			p.created_at,
+			p.buyer_id,
 			u.name 
 		FROM products p
 		JOIN users u ON p.user_id = u.id
@@ -93,15 +101,90 @@ func (d *ProductDao) FindByName(keyword string) ([]*model.Product, error) {
 	var products []*model.Product
 	for rows.Next() {
 		p := &model.Product{}
+		var buyerID sql.NullString
 		err := rows.Scan(
-			&p.ID, &p.Name, &p.Price, &p.Description, &p.UserID, &p.ImageURL, &p.CreatedAt, &p.UserName,
+			&p.ID, &p.Name, &p.Price, &p.Description, &p.UserID, &p.ImageURL, &p.CreatedAt, &buyerID, &p.UserName,
 		)
 		if err != nil {
 			return nil, err
 		}
+		if buyerID.Valid {
+			p.BuyerID = buyerID.String
+		}
 		products = append(products, p)
 	}
 	return products, nil
+}
+
+func (d *ProductDao) FindByID(productID string) (*model.Product, error) {
+	query := `
+		SELECT 
+			p.id, 
+			p.name, 
+			p.price, 
+			p.description, 
+			p.user_id, 
+			COALESCE(p.image_url, ''), 
+			p.created_at,
+			p.buyer_id,  -- ★追加: 購入者情報
+			u.name 
+		FROM products p
+		JOIN users u ON p.user_id = u.id
+		WHERE p.id = ?
+	`
+	// buyer_id は NULL の可能性があるので sql.NullString で受け取るのが安全ですが
+	// 今回はポインタか、あるいは NULL なら空文字にするなど工夫します。
+	// シンプルに Scan で *string に入れると NULL 対応できます。
+	var buyerID *string
+
+	p := &model.Product{}
+	err := d.db.QueryRow(query, productID).Scan(
+		&p.ID,
+		&p.Name,
+		&p.Price,
+		&p.Description,
+		&p.UserID,
+		&p.ImageURL,
+		&p.CreatedAt,
+		&buyerID, // NULL許容
+		&p.UserName,
+	)
+
+	if err != nil {
+		return nil, err
+	}
+
+	// *string から string へ変換（NULLなら空文字）
+	if buyerID != nil {
+		p.BuyerID = *buyerID
+	}
+
+	return p, nil
+}
+
+// UpdateBuyerID は購入処理です（既に売れていないかチェックも含みます）
+func (d *ProductDao) UpdateBuyerID(productID string, buyerID string) error {
+	// buyer_id が NULL の場合のみ更新する（＝早い者勝ち）
+	query := `
+		UPDATE products 
+		SET buyer_id = ? 
+		WHERE id = ? AND buyer_id IS NULL
+	`
+	result, err := d.db.Exec(query, buyerID, productID)
+	if err != nil {
+		return err
+	}
+
+	rows, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if rows == 0 {
+		// 更新されなかった＝既に売り切れ or 商品がない
+		return fmt.Errorf("sold out or not found")
+	}
+
+	return nil
 }
 
 func (d *ProductDao) Delete(productID string, userID string) error {
