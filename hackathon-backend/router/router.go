@@ -67,6 +67,7 @@ func NewRouter(
 func enableCORS(w http.ResponseWriter, r *http.Request) bool {
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 	w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+	w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
 	// OPTIONSリクエスト（プリフライト）の場合はここで処理を終える
 	if r.Method == "OPTIONS" {
 		w.WriteHeader(http.StatusOK)
