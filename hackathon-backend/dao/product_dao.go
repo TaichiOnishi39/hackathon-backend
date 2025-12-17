@@ -60,3 +60,26 @@ func (d *ProductDao) FindAll() ([]*model.Product, error) {
 	}
 	return products, nil
 }
+
+func (d *ProductDao) DeleteProduct(productID string, userID string) error {
+	// user_id も条件に入れることで、他人の商品を消せないようにする
+	query := "DELETE FROM products WHERE id = ? AND user_id = ?"
+	result, err := d.db.Exec(query, productID, userID)
+	if err != nil {
+		return err
+	}
+
+	// 実際に消えたか確認（該当なし＝他人の商品 or 存在しない）
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if rowsAffected == 0 {
+		// 削除対象が見つからなかった（権限なし含む）場合はエラーを返すなどの設計も可能ですが、
+		// ここではエラーなしとして返すか、専用エラーを返すか決められます。
+		// 今回は「権限がないか商品がない」ことがわかるようにエラーを返しましょう。
+		return sql.ErrNoRows
+	}
+
+	return nil
+}
