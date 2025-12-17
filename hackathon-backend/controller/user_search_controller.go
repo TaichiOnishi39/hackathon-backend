@@ -1,6 +1,7 @@
 package controller
 
 import (
+	"fmt"
 	"hackathon-backend/usecase"
 	"log"
 	"net/http"
@@ -49,8 +50,10 @@ func (c *SearchUserController) HandleGetMe(w http.ResponseWriter, r *http.Reques
 		c.respondError(w, http.StatusInternalServerError, err)
 		return
 	}
+	
 	if user == nil {
-		c.respondJSON(w, http.StatusOK, nil) // または空JSONを返すなど
+		// 404 Not Found を返す (これでフロントエンドが「未登録だ」と気づける)
+		c.respondError(w, http.StatusNotFound, fmt.Errorf("user not found"))
 		return
 	}
 
