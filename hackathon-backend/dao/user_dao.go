@@ -51,6 +51,18 @@ func (dao *UserDao) FindByFirebaseUID(firebaseUID string) (*model.User, error) {
 	return &user, nil
 }
 
+func (dao *UserDao) FindByID(id string) (*model.User, error) {
+	var user model.User
+	row := dao.db.QueryRow("SELECT id, name, firebase_uid FROM users WHERE id = ?", id)
+	if err := row.Scan(&user.ID, &user.Name, &user.FirebaseUID); err != nil {
+		if err == sql.ErrNoRows {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return &user, nil
+}
+
 func (dao *UserDao) CreateOrUpdate(ulid string, firebaseUID string, name string) (*model.User, error) {
 	tx, err := dao.db.Begin()
 	if err != nil {
