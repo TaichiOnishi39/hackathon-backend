@@ -50,7 +50,7 @@ func (c *SearchUserController) HandleGetMe(w http.ResponseWriter, r *http.Reques
 		return
 	}
 	if user == nil {
-		c.respondError(w, http.StatusNotFound, nil) // または空JSONを返すなど
+		c.respondJSON(w, http.StatusOK, nil) // または空JSONを返すなど
 		return
 	}
 

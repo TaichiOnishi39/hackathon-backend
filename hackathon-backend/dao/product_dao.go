@@ -30,7 +30,19 @@ func (d *ProductDao) Create(product *model.Product) error {
 }
 
 func (d *ProductDao) FindAll() ([]*model.Product, error) {
-	query := "SELECT id, name, price, description, user_id, created_at FROM products ORDER BY created_at DESC"
+	query := `
+		SELECT 
+			p.id, 
+			p.name, 
+			p.price, 
+			p.description, 
+			p.user_id, 
+			p.created_at,
+			u.name as user_name 
+		FROM products p
+		JOIN users u ON p.user_id = u.id
+		ORDER BY p.created_at DESC
+	`
 	rows, err := d.db.Query(query)
 	if err != nil {
 		return nil, err
@@ -40,7 +52,7 @@ func (d *ProductDao) FindAll() ([]*model.Product, error) {
 	var products []*model.Product
 	for rows.Next() {
 		p := &model.Product{}
-		err := rows.Scan(&p.ID, &p.Name, &p.Price, &p.Description, &p.UserID, &p.CreatedAt)
+		err := rows.Scan(&p.ID, &p.Name, &p.Price, &p.Description, &p.UserID, &p.CreatedAt, &p.UserName)
 		if err != nil {
 			return nil, err
 		}

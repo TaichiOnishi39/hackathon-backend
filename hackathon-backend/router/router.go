@@ -10,6 +10,7 @@ func NewRouter(
 	registerUserCtrl *controller.RegisterUserController,
 	searchUserCtrl *controller.SearchUserController,
 	productRegisterCtrl *controller.ProductRegisterController,
+	productSearchCtrl *controller.ProductSearchController,
 ) http.Handler {
 	mux := http.NewServeMux()
 
@@ -49,9 +50,12 @@ func NewRouter(
 		if !enableCORS(w, r) {
 			return
 		}
-		if r.Method == http.MethodPost {
+		switch r.Method {
+		case http.MethodPost:
 			productRegisterCtrl.Handler(w, r)
-		} else {
+		case http.MethodGet:
+			productSearchCtrl.HandleListProducts(w, r)
+		default:
 			w.WriteHeader(http.StatusMethodNotAllowed)
 		}
 	})
@@ -63,6 +67,7 @@ func NewRouter(
 func enableCORS(w http.ResponseWriter, r *http.Request) bool {
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 	w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+	w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
 	// OPTIONSリクエスト（プリフライト）の場合はここで処理を終える
 	if r.Method == "OPTIONS" {
 		w.WriteHeader(http.StatusOK)
