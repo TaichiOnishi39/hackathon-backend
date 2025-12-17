@@ -41,12 +41,14 @@ func main() {
 	searchUsecase := usecase.NewSearchUserUsecase(userDAO)
 	productRegisterUsecase := usecase.NewProductRegisterUsecase(productDAO, userDAO)
 	productSearchUsecase := usecase.NewProductSearchUsecase(productDAO)
+	productDeleteUsecase := usecase.NewProductDeleteUsecase(productDAO, userDAO)
 
 	//Controller
 	registerUserCtrl := controller.NewRegisterUserController(registerUsecase, authClient)
 	searchUserCtrl := controller.NewSearchUserController(searchUsecase, authClient)
 	productRegisterCtrl := controller.NewProductRegisterController(productRegisterUsecase, authClient)
 	productSearchCtrl := controller.NewProductSearchController(productSearchUsecase, authClient)
+	productDeleteCtrl := controller.NewProductDeleteController(productDeleteUsecase, authClient)
 
 	// --- 3. ルーティング設定 ---
 	mux := router.NewRouter(
@@ -54,6 +56,7 @@ func main() {
 		searchUserCtrl,
 		productRegisterCtrl,
 		productSearchCtrl,
+		productDeleteCtrl,
 	)
 
 	// シャットダウン処理のセットアップ
