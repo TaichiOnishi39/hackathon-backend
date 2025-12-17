@@ -8,6 +8,7 @@ type Product struct {
 	Price       int       `json:"price"`
 	Description string    `json:"description"`
 	UserID      string    `json:"user_id"` // ここは User の ID を入れる
+	UserName    string    `json:"user_name"`
 	CreatedAt   time.Time `json:"created_at"`
 }
 
