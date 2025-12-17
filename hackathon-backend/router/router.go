@@ -137,6 +137,34 @@ func NewRouter(
 		}
 	})
 
+	// 出品した商品
+	mux.HandleFunc(" /users/me/products", func(w http.ResponseWriter, r *http.Request) {
+		if !enableCORS(w, r) {
+			return
+		}
+		if r.Method == http.MethodGet {
+			productSearchCtrl.HandleGetSelling(w, r)
+		}
+	})
+	// 購入した商品
+	mux.HandleFunc("/users/me/purchases", func(w http.ResponseWriter, r *http.Request) {
+		if !enableCORS(w, r) {
+			return
+		}
+		if r.Method == http.MethodGet {
+			productSearchCtrl.HandleGetPurchased(w, r)
+		}
+	})
+	// いいねした商品
+	mux.HandleFunc("/users/me/likes", func(w http.ResponseWriter, r *http.Request) {
+		if !enableCORS(w, r) {
+			return
+		}
+		if r.Method == http.MethodGet {
+			productSearchCtrl.HandleGetLiked(w, r)
+		}
+	})
+
 	return mux
 }
 

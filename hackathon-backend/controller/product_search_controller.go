@@ -32,3 +32,48 @@ func (c *ProductSearchController) HandleListProducts(w http.ResponseWriter, r *h
 	// 取得したリストをJSONで返す
 	c.respondJSON(w, http.StatusOK, products)
 }
+
+// HandleGetSelling: GET /users/me/products (出品履歴)
+func (c *ProductSearchController) HandleGetSelling(w http.ResponseWriter, r *http.Request) {
+	firebaseUID, err := c.verifyToken(r)
+	if err != nil {
+		c.respondError(w, http.StatusUnauthorized, err)
+		return
+	}
+	products, err := c.Usecase.GetSellingProducts(firebaseUID)
+	if err != nil {
+		c.respondError(w, http.StatusInternalServerError, err)
+		return
+	}
+	c.respondJSON(w, http.StatusOK, products)
+}
+
+// HandleGetPurchased: GET /users/me/purchases (購入履歴)
+func (c *ProductSearchController) HandleGetPurchased(w http.ResponseWriter, r *http.Request) {
+	firebaseUID, err := c.verifyToken(r)
+	if err != nil {
+		c.respondError(w, http.StatusUnauthorized, err)
+		return
+	}
+	products, err := c.Usecase.GetPurchasedProducts(firebaseUID)
+	if err != nil {
+		c.respondError(w, http.StatusInternalServerError, err)
+		return
+	}
+	c.respondJSON(w, http.StatusOK, products)
+}
+
+// HandleGetLiked: GET /users/me/likes (いいね一覧)
+func (c *ProductSearchController) HandleGetLiked(w http.ResponseWriter, r *http.Request) {
+	firebaseUID, err := c.verifyToken(r)
+	if err != nil {
+		c.respondError(w, http.StatusUnauthorized, err)
+		return
+	}
+	products, err := c.Usecase.GetLikedProducts(firebaseUID)
+	if err != nil {
+		c.respondError(w, http.StatusInternalServerError, err)
+		return
+	}
+	c.respondJSON(w, http.StatusOK, products)
+}

@@ -55,7 +55,7 @@ func main() {
 	registerUsecase := usecase.NewRegisterUserUsecase(userDAO)
 	searchUsecase := usecase.NewSearchUserUsecase(userDAO)
 	productRegisterUsecase := usecase.NewProductRegisterUsecase(productDAO, userDAO, storageService)
-	productSearchUsecase := usecase.NewProductSearchUsecase(productDAO, storageService)
+	productSearchUsecase := usecase.NewProductSearchUsecase(productDAO, userDAO, storageService)
 	productDeleteUsecase := usecase.NewProductDeleteUsecase(productDAO, userDAO)
 	productUpdateUsecase := usecase.NewProductUpdateUsecase(productDAO, userDAO)
 	productDetailUsecase := usecase.NewProductDetailUsecase(productDAO, storageService)
