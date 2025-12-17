@@ -21,8 +21,9 @@ func NewProductSearchController(u *usecase.ProductSearchUsecase, auth *auth.Clie
 
 // HandleListProducts が GET /products の処理です
 func (c *ProductSearchController) HandleListProducts(w http.ResponseWriter, r *http.Request) {
+	keyword := r.URL.Query().Get("q")
 	// Usecase から商品一覧を取得
-	products, err := c.Usecase.GetAllProducts()
+	products, err := c.Usecase.SearchProducts(keyword)
 	if err != nil {
 		c.respondError(w, http.StatusInternalServerError, err)
 		return

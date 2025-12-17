@@ -15,8 +15,12 @@ func NewProductSearchUsecase(pDAO *dao.ProductDao) *ProductSearchUsecase {
 	}
 }
 
-// GetAllProducts は全商品を新着順に取得します
-func (u *ProductSearchUsecase) GetAllProducts() ([]*model.Product, error) {
-	// 将来的にはここで「価格フィルタ」や「ワード検索」のロジックを追加できます
-	return u.ProductDAO.FindAll()
+// SearchProducts は商品を検索します（キーワードが空なら全件）(新着順)
+func (u *ProductSearchUsecase) SearchProducts(keyword string) ([]*model.Product, error) {
+	if keyword == "" {
+		// キーワードがないなら全件取得
+		return u.ProductDAO.FindAll()
+	}
+	// キーワードがあるなら検索
+	return u.ProductDAO.SearchByName(keyword)
 }

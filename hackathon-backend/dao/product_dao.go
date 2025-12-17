@@ -61,6 +61,46 @@ func (d *ProductDao) FindAll() ([]*model.Product, error) {
 	return products, nil
 }
 
+func (d *ProductDao) SearchByName(keyword string) ([]*model.Product, error) {
+	// ユーザー名も取得したいのでJOINします
+	// WHERE p.name LIKE ? を追加
+	query := `
+		SELECT 
+			p.id, 
+			p.name, 
+			p.price, 
+			p.description, 
+			p.user_id, 
+			p.created_at,
+			u.name 
+		FROM products p
+		JOIN users u ON p.user_id = u.id
+		WHERE p.name LIKE ?
+		ORDER BY p.created_at DESC
+	`
+	// %keyword% の形にして部分一致にする
+	likeQuery := "%" + keyword + "%"
+
+	rows, err := d.db.Query(query, likeQuery)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var products []*model.Product
+	for rows.Next() {
+		p := &model.Product{}
+		err := rows.Scan(
+			&p.ID, &p.Name, &p.Price, &p.Description, &p.UserID, &p.CreatedAt, &p.UserName,
+		)
+		if err != nil {
+			return nil, err
+		}
+		products = append(products, p)
+	}
+	return products, nil
+}
+
 func (d *ProductDao) DeleteProduct(productID string, userID string) error {
 	// user_id も条件に入れることで、他人の商品を消せないようにする
 	query := "DELETE FROM products WHERE id = ? AND user_id = ?"
