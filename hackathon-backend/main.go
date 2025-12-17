@@ -40,14 +40,21 @@ func main() {
 	registerUsecase := usecase.NewRegisterUserUsecase(userDAO)
 	searchUsecase := usecase.NewSearchUserUsecase(userDAO)
 	productRegisterUsecase := usecase.NewProductRegisterUsecase(productDAO, userDAO)
+	productSearchUsecase := usecase.NewProductSearchUsecase(productDAO)
 
 	//Controller
 	registerUserCtrl := controller.NewRegisterUserController(registerUsecase, authClient)
 	searchUserCtrl := controller.NewSearchUserController(searchUsecase, authClient)
 	productRegisterCtrl := controller.NewProductRegisterController(productRegisterUsecase, authClient)
+	productSearchCtrl := controller.NewProductSearchController(productSearchUsecase, authClient)
 
 	// --- 3. ルーティング設定 ---
-	mux := router.NewRouter(registerUserCtrl, searchUserCtrl, productRegisterCtrl)
+	mux := router.NewRouter(
+		registerUserCtrl,
+		searchUserCtrl,
+		productRegisterCtrl,
+		productSearchCtrl,
+	)
 
 	// シャットダウン処理のセットアップ
 	closeDBWithSysCall()
