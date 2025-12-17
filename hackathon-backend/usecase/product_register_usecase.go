@@ -37,6 +37,11 @@ func (u *ProductRegisterUsecase) RegisterProduct(firebaseUID, name, description 
 		return nil, errors.New("ユーザーが見つかりませんでした")
 	}
 
+	// ★追加: 画像のバリデーション
+	if imageFile == nil || imageFilename == "" {
+		return nil, errors.New("image is required")
+	}
+
 	// 2. 商品の ULID を生成する
 	t := time.Now()
 	entropy := ulid.Monotonic(rand.New(rand.NewSource(t.UnixNano())), 0)
@@ -44,18 +49,17 @@ func (u *ProductRegisterUsecase) RegisterProduct(firebaseUID, name, description 
 
 	// 3. 画像アップロード (ファイルがある場合のみ)
 	var storedImageName string
-	if imageFile != nil && imageFilename != "" {
-		// ファイル名が重複しないようにIDをプレフィックスにつける
-		// 例: products/01HXYZ..._cat.jpg
-		uploadPath := "products/" + productID + "_" + imageFilename
 
-		ctx := context.Background()
-		path, err := u.StorageService.Upload(ctx, imageFile, uploadPath)
-		if err != nil {
-			return nil, err
-		}
-		storedImageName = path
+	// ファイル名が重複しないようにIDをプレフィックスにつける
+	// 例: products/01HXYZ..._cat.jpg
+	uploadPath := "products/" + productID + "_" + imageFilename
+
+	ctx := context.Background()
+	path, err := u.StorageService.Upload(ctx, imageFile, uploadPath)
+	if err != nil {
+		return nil, err
 	}
+	storedImageName = path
 
 	//  保存用のモデルを作成する
 	newProduct := &model.Product{

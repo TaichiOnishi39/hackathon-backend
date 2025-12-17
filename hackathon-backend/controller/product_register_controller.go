@@ -1,8 +1,8 @@
 package controller
 
 import (
+	"fmt"
 	"hackathon-backend/usecase"
-	"io"
 	"net/http"
 	"strconv"
 
@@ -47,24 +47,21 @@ func (c *ProductRegisterController) Handler(w http.ResponseWriter, r *http.Reque
 
 	//  画像ファイルの取得
 	file, header, err := r.FormFile("image") // フロント側で "image" というキーで送る
-	// 画像がない場合も許容するならエラーハンドリングを調整
-	// 今回は「画像なしでもOK」とする場合:
-	var fileReader io.Reader
-	var fileName string
-	if err == nil {
-		defer file.Close()
-		fileReader = file
-		fileName = header.Filename
-	}
 
+	// ★変更: 画像がない場合はエラーにする
+	if err != nil {
+		c.respondError(w, http.StatusBadRequest, fmt.Errorf("image is required"))
+		return
+	}
+	defer file.Close()
 	//  Usecase 実行
 	product, err := c.Usecase.RegisterProduct(
 		firebaseUID,
 		name,
 		description,
 		price,
-		fileReader, // 画像データ
-		fileName,   // ファイル名
+		file,
+		header.Filename,
 	)
 
 	if err != nil {
