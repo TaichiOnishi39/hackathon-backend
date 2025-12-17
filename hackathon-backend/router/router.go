@@ -69,19 +69,31 @@ func NewRouter(
 	})
 
 	// /products/{id}
-	mux.HandleFunc("GET /products/{id}", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/products/{id}", func(w http.ResponseWriter, r *http.Request) {
+		// 1. ここで OPTIONS も含めて CORS を許可する
 		if !enableCORS(w, r) {
 			return
 		}
-		productDetailCtrl.HandleGetProduct(w, r)
+		// 2. GET の時だけ処理する
+		if r.Method == http.MethodGet {
+			productDetailCtrl.HandleGetProduct(w, r)
+		} else {
+			w.WriteHeader(http.StatusMethodNotAllowed)
+		}
 	})
 
 	// /products/{id}/purchase
-	mux.HandleFunc("POST /products/{id}/purchase", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/products/{id}/purchase", func(w http.ResponseWriter, r *http.Request) {
+		// 1. ここで OPTIONS も含めて CORS を許可する
 		if !enableCORS(w, r) {
 			return
 		}
-		productPurchaseCtrl.HandlePurchaseProduct(w, r)
+		// 2. POST の時だけ処理する
+		if r.Method == http.MethodPost {
+			productPurchaseCtrl.HandlePurchaseProduct(w, r)
+		} else {
+			w.WriteHeader(http.StatusMethodNotAllowed)
+		}
 	})
 
 	return mux
