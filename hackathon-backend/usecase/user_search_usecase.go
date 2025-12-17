@@ -13,11 +13,10 @@ func NewSearchUserUsecase(d *dao.UserDao) *SearchUserUsecase {
 	return &SearchUserUsecase{UserDao: d}
 }
 
-func (u *SearchUserUsecase) SearchUser(name string) ([]model.UserResForHTTPGet, error) {
-	// ここで「名前が空でないか」などのロジックを入れることも可能
+func (u *SearchUserUsecase) SearchUser(name string) ([]model.UserRes, error) {
 	return u.UserDao.FindByName(name)
 }
 
 func (u *SearchUserUsecase) GetUserByFirebaseUID(firebaseUID string) (*model.User, error) {
-	return u.UserDao.GetUserByFirebaseUID(firebaseUID)
+	return u.UserDao.FindByFirebaseUID(firebaseUID)
 }
