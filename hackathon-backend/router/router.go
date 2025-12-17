@@ -16,6 +16,7 @@ func NewRouter(
 	productDetailCtrl *controller.ProductDetailController,
 	productPurchaseCtrl *controller.ProductPurchaseController,
 	messageCtrl *controller.MessageController,
+	productLikeCtrl *controller.ProductLikeController,
 ) http.Handler {
 	mux := http.NewServeMux()
 
@@ -116,6 +117,22 @@ func NewRouter(
 		if r.Method == http.MethodGet {
 			messageCtrl.HandleGetChatList(w, r)
 		} else {
+			w.WriteHeader(http.StatusMethodNotAllowed)
+		}
+	})
+
+	// いいね機能
+	// GET: 状態確認, POST: 切り替え
+	mux.HandleFunc("/products/{id}/like", func(w http.ResponseWriter, r *http.Request) {
+		if !enableCORS(w, r) {
+			return
+		}
+		switch r.Method {
+		case http.MethodGet:
+			productLikeCtrl.HandleGetLikeStatus(w, r)
+		case http.MethodPost:
+			productLikeCtrl.HandleToggleLike(w, r)
+		default:
 			w.WriteHeader(http.StatusMethodNotAllowed)
 		}
 	})
