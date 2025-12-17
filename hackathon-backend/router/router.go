@@ -12,6 +12,7 @@ func NewRouter(
 	productRegisterCtrl *controller.ProductRegisterController,
 	productSearchCtrl *controller.ProductSearchController,
 	productDeleteCtrl *controller.ProductDeleteController,
+	productUpdateCtrl *controller.ProductUpdateController,
 ) http.Handler {
 	mux := http.NewServeMux()
 
@@ -58,6 +59,8 @@ func NewRouter(
 			productSearchCtrl.HandleListProducts(w, r)
 		case http.MethodDelete:
 			productDeleteCtrl.HandleDeleteProduct(w, r)
+		case http.MethodPut:
+			productUpdateCtrl.HandleUpdateProduct(w, r)
 		default:
 			w.WriteHeader(http.StatusMethodNotAllowed)
 		}
