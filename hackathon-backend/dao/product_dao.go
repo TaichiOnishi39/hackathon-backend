@@ -83,3 +83,27 @@ func (d *ProductDao) DeleteProduct(productID string, userID string) error {
 
 	return nil
 }
+
+func (d *ProductDao) UpdateProduct(productID string, userID string, name string, price int, description string) error {
+	// user_id も条件に入れることで、他人の商品を更新できないようにする
+	query := `
+		UPDATE products 
+		SET name = ?, price = ?, description = ? 
+		WHERE id = ? AND user_id = ?
+	`
+	result, err := d.db.Exec(query, name, price, description, productID, userID)
+	if err != nil {
+		return err
+	}
+
+	// 更新対象があったか確認
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if rowsAffected == 0 {
+		return sql.ErrNoRows // 対象なし（権限なし含む）
+	}
+
+	return nil
+}
