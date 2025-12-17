@@ -38,6 +38,7 @@ func (d *ProductDao) FindAll() ([]*model.Product, error) {
 			p.price, 
 			p.description, 
 			p.user_id, 
+			p.image_url,
 			p.created_at,
 			u.name as user_name 
 		FROM products p
@@ -53,7 +54,7 @@ func (d *ProductDao) FindAll() ([]*model.Product, error) {
 	var products []*model.Product
 	for rows.Next() {
 		p := &model.Product{}
-		err := rows.Scan(&p.ID, &p.Name, &p.Price, &p.Description, &p.UserID, &p.CreatedAt, &p.UserName)
+		err := rows.Scan(&p.ID, &p.Name, &p.Price, &p.Description, &p.UserID, &p.ImageURL, &p.CreatedAt, &p.UserName)
 		if err != nil {
 			return nil, err
 		}
@@ -71,7 +72,8 @@ func (d *ProductDao) FindByName(keyword string) ([]*model.Product, error) {
 			p.name, 
 			p.price, 
 			p.description, 
-			p.user_id, 
+			p.user_id,
+			p.image_url,
 			p.created_at,
 			u.name 
 		FROM products p
@@ -92,7 +94,7 @@ func (d *ProductDao) FindByName(keyword string) ([]*model.Product, error) {
 	for rows.Next() {
 		p := &model.Product{}
 		err := rows.Scan(
-			&p.ID, &p.Name, &p.Price, &p.Description, &p.UserID, &p.CreatedAt, &p.UserName,
+			&p.ID, &p.Name, &p.Price, &p.Description, &p.UserID, &p.ImageURL, &p.CreatedAt, &p.UserName,
 		)
 		if err != nil {
 			return nil, err
