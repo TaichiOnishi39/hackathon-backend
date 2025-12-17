@@ -13,6 +13,8 @@ func NewRouter(
 	productSearchCtrl *controller.ProductSearchController,
 	productDeleteCtrl *controller.ProductDeleteController,
 	productUpdateCtrl *controller.ProductUpdateController,
+	productDetailCtrl *controller.ProductDetailController,
+	productPurchaseCtrl *controller.ProductPurchaseController,
 ) http.Handler {
 	mux := http.NewServeMux()
 
@@ -64,6 +66,22 @@ func NewRouter(
 		default:
 			w.WriteHeader(http.StatusMethodNotAllowed)
 		}
+	})
+
+	// /products/{id}
+	mux.HandleFunc("GET /products/{id}", func(w http.ResponseWriter, r *http.Request) {
+		if !enableCORS(w, r) {
+			return
+		}
+		productDetailCtrl.HandleGetProduct(w, r)
+	})
+
+	// /products/{id}/purchase
+	mux.HandleFunc("POST /products/{id}/purchase", func(w http.ResponseWriter, r *http.Request) {
+		if !enableCORS(w, r) {
+			return
+		}
+		productPurchaseCtrl.HandlePurchaseProduct(w, r)
 	})
 
 	return mux
