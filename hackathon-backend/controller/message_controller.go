@@ -71,3 +71,20 @@ func (c *MessageController) HandleGetChat(w http.ResponseWriter, r *http.Request
 
 	c.respondJSON(w, http.StatusOK, msgs)
 }
+
+// HandleGetChatList: GET /messages/list
+func (c *MessageController) HandleGetChatList(w http.ResponseWriter, r *http.Request) {
+	firebaseUID, err := c.verifyToken(r)
+	if err != nil {
+		c.respondError(w, http.StatusUnauthorized, err)
+		return
+	}
+
+	chatList, err := c.Usecase.GetChatList(firebaseUID)
+	if err != nil {
+		c.respondError(w, http.StatusInternalServerError, err)
+		return
+	}
+
+	c.respondJSON(w, http.StatusOK, chatList)
+}

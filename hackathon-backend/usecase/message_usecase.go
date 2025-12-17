@@ -68,3 +68,58 @@ func (u *MessageUsecase) GetChatHistory(myFirebaseUID, otherUserID string) ([]*m
 	// 2. 履歴取得
 	return u.MessageDAO.GetMessagesBetween(me.ID, otherUserID)
 }
+
+// GetChatList: チャット一覧（相手ごとの最新メッセージ）を取得
+func (u *MessageUsecase) GetChatList(myFirebaseUID string) ([]*model.ChatListRes, error) {
+	// 1. 自分を特定
+	me, err := u.UserDAO.FindByFirebaseUID(myFirebaseUID)
+	if err != nil {
+		return nil, err
+	}
+	if me == nil {
+		return nil, errors.New("user not found")
+	}
+
+	// 2. 全メッセージを取得（新しい順）
+	allMessages, err := u.MessageDAO.FindAllByUserID(me.ID)
+	if err != nil {
+		return nil, err
+	}
+
+	// 3. 相手ごとに集約する
+	var chatList []*model.ChatListRes
+	processedPartners := make(map[string]bool) // 既に処理した相手IDを記録
+
+	for _, msg := range allMessages {
+		// 相手のIDを特定
+		partnerID := msg.ReceiverID
+		if msg.SenderID != me.ID {
+			partnerID = msg.SenderID // 自分が受信者の場合、相手はSender
+		}
+
+		// まだリストに追加していない相手なら追加
+		if !processedPartners[partnerID] {
+			// 相手の情報を取得（名前を知るため）
+			partner, err := u.UserDAO.FindByID(partnerID)
+			if err != nil {
+				// エラーでも一旦スキップして続ける
+				continue
+			}
+			partnerName := "不明なユーザー"
+			if partner != nil {
+				partnerName = partner.Name
+			}
+
+			chatList = append(chatList, &model.ChatListRes{
+				PartnerID:   partnerID,
+				PartnerName: partnerName,
+				LastMessage: msg.Content,
+				LastTime:    msg.CreatedAt,
+			})
+
+			processedPartners[partnerID] = true
+		}
+	}
+
+	return chatList, nil
+}

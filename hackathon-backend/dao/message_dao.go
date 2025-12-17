@@ -49,3 +49,28 @@ func (d *MessageDao) GetMessagesBetween(userA, userB string) ([]*model.Message, 
 	}
 	return messages, nil
 }
+
+// FindAllByUserID: 自分に関係する全てのメッセージを新しい順に取得
+func (d *MessageDao) FindAllByUserID(userID string) ([]*model.Message, error) {
+	query := `
+		SELECT id, sender_id, receiver_id, content, created_at 
+		FROM messages 
+		WHERE sender_id = ? OR receiver_id = ? 
+		ORDER BY created_at DESC
+	`
+	rows, err := d.db.Query(query, userID, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var messages []*model.Message
+	for rows.Next() {
+		m := &model.Message{}
+		if err := rows.Scan(&m.ID, &m.SenderID, &m.ReceiverID, &m.Content, &m.CreatedAt); err != nil {
+			return nil, err
+		}
+		messages = append(messages, m)
+	}
+	return messages, nil
+}

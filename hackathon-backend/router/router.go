@@ -93,6 +93,7 @@ func NewRouter(
 		}
 	})
 
+	// /messages
 	mux.HandleFunc("/messages", func(w http.ResponseWriter, r *http.Request) {
 		if !enableCORS(w, r) {
 			return
@@ -103,6 +104,18 @@ func NewRouter(
 		case http.MethodGet:
 			messageCtrl.HandleGetChat(w, r)
 		default:
+			w.WriteHeader(http.StatusMethodNotAllowed)
+		}
+	})
+
+	// /messages/list
+	mux.HandleFunc("/messages/list", func(w http.ResponseWriter, r *http.Request) {
+		if !enableCORS(w, r) {
+			return
+		}
+		if r.Method == http.MethodGet {
+			messageCtrl.HandleGetChatList(w, r)
+		} else {
 			w.WriteHeader(http.StatusMethodNotAllowed)
 		}
 	})
