@@ -116,6 +116,7 @@ func (d *ProductDao) FindByName(keyword string) ([]*model.Product, error) {
 	return products, nil
 }
 
+// productIDで
 func (d *ProductDao) FindByID(productID string) (*model.Product, error) {
 	query := `
 		SELECT 
@@ -160,6 +161,76 @@ func (d *ProductDao) FindByID(productID string) (*model.Product, error) {
 	}
 
 	return p, nil
+}
+
+// FindByUserID: 自分が【出品】した商品を取得
+func (d *ProductDao) FindByUserID(userID string) ([]*model.Product, error) {
+	query := `
+		SELECT 
+			p.id, p.name, p.price, p.description, p.user_id, 
+			COALESCE(p.image_url, ''), p.created_at, p.buyer_id, u.name 
+		FROM products p
+		JOIN users u ON p.user_id = u.id
+		WHERE p.user_id = ?
+		ORDER BY p.created_at DESC
+	`
+	return d.fetchProducts(query, userID)
+}
+
+// FindByBuyerID: 自分が【購入】した商品を取得
+func (d *ProductDao) FindByBuyerID(buyerID string) ([]*model.Product, error) {
+	query := `
+		SELECT 
+			p.id, p.name, p.price, p.description, p.user_id, 
+			COALESCE(p.image_url, ''), p.created_at, p.buyer_id, u.name 
+		FROM products p
+		JOIN users u ON p.user_id = u.id
+		WHERE p.buyer_id = ?
+		ORDER BY p.created_at DESC
+	`
+	return d.fetchProducts(query, buyerID)
+}
+
+// FindLikedProducts: 自分が【いいね】した商品を取得
+func (d *ProductDao) FindLikedProducts(userID string) ([]*model.Product, error) {
+	query := `
+		SELECT 
+			p.id, p.name, p.price, p.description, p.user_id, 
+			COALESCE(p.image_url, ''), p.created_at, p.buyer_id, u.name 
+		FROM products p
+		JOIN users u ON p.user_id = u.id
+		JOIN likes l ON p.id = l.product_id  -- likesテーブルと結合
+		WHERE l.user_id = ?
+		ORDER BY p.created_at DESC
+	`
+	return d.fetchProducts(query, userID)
+}
+
+// 共通処理
+func (d *ProductDao) fetchProducts(query string, args ...interface{}) ([]*model.Product, error) {
+	rows, err := d.db.Query(query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var products []*model.Product
+	for rows.Next() {
+		p := &model.Product{}
+		var buyerID sql.NullString
+		err := rows.Scan(
+			&p.ID, &p.Name, &p.Price, &p.Description, &p.UserID,
+			&p.ImageURL, &p.CreatedAt, &buyerID, &p.UserName,
+		)
+		if err != nil {
+			return nil, err
+		}
+		if buyerID.Valid {
+			p.BuyerID = buyerID.String
+		}
+		products = append(products, p)
+	}
+	return products, nil
 }
 
 // UpdateBuyerID は購入処理です（既に売れていないかチェックも含みます）
