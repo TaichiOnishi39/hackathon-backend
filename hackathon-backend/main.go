@@ -11,90 +11,43 @@ import (
 	"syscall"
 
 	firebase "firebase.google.com/go"
+	"firebase.google.com/go/auth"
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/joho/godotenv"
-	// 各パッケージをインポート (module名は適宜書き換えてください)
+
 	"hackathon-backend/controller"
 	"hackathon-backend/dao"
+	"hackathon-backend/router"
 	"hackathon-backend/usecase"
 )
 
 var db *sql.DB
 
 func main() {
-	// --- 1. DB接続設定 ---
-	err := godotenv.Load()
-	if err != nil {
-		log.Println("Warning: .env file not found")
-	}
+	// --- DB接続設定 ---
+	_ = godotenv.Load()
 
-	mysqlUser := os.Getenv("MYSQL_USER")
-	mysqlUserPwd := os.Getenv("MYSQL_PASSWORD")
-	mysqlDatabase := os.Getenv("MYSQL_DATABASE")
-	mysqlHost := os.Getenv("MYSQL_HOST")
-	dsn := fmt.Sprintf("%s:%s@%s/%s?parseTime=true", mysqlUser, mysqlUserPwd, mysqlHost, mysqlDatabase)
-
-	db, err = sql.Open("mysql", dsn)
-	if err != nil {
-		log.Fatalf("fail: sql.Open, %v\n", err)
-	}
-
-	if err := db.Ping(); err != nil {
-		log.Fatalf("fail: db.Ping, %v\n", err)
-	}
-	log.Println("Successfully connected to the database!")
-
+	db := initDB()
+	defer db.Close()
 	// --- Firebase初期化 (追加) ---
-	ctx := context.Background()
-	conf := &firebase.Config{ProjectID: "term8-taichi-onishi"}
-	app, err := firebase.NewApp(ctx, conf)
-	if err != nil {
-		log.Fatalf("error initializing app: %v\n", err)
-	}
-	authClient, err := app.Auth(context.Background())
-	if err != nil {
-		log.Fatalf("error initializing auth client: %v\n", err)
-	}
+	authClient := initFirebase()
 
+	//DAO
 	userDAO := dao.NewUserDao(db)
+	productDAO := dao.NewProductDAO(db)
+
+	//Usecase
 	registerUsecase := usecase.NewRegisterUserUsecase(userDAO)
 	searchUsecase := usecase.NewSearchUserUsecase(userDAO)
-	registerController := controller.NewRegisterUserController(registerUsecase, authClient)
-	searchController := controller.NewSearchUserController(searchUsecase, authClient)
-	// --- 3. ルーティング設定 ---
-	// 単一のエンドポイントでメソッドによって振り分ける場合
-	http.HandleFunc("/users", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Access-Control-Allow-Origin", "*")
-		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
-		if r.Method == "OPTIONS" {
-			return
-		}
-		switch r.Method {
-		case http.MethodGet:
-			searchController.Handle(w, r)
-		case http.MethodPost:
-			registerController.Handle(w, r)
-		default:
-			log.Printf("fail: HTTP Method is %s\n", r.Method)
-			w.WriteHeader(http.StatusBadRequest)
-		}
-	})
+	productRegisterUsecase := usecase.NewProductRegisterUsecase(productDAO, userDAO)
 
-	http.HandleFunc("/users/me", func(w http.ResponseWriter, r *http.Request) {
-		// CORS設定は/usersと同じものを適用
-		w.Header().Set("Access-Control-Allow-Origin", "*")
-		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
-		if r.Method == "OPTIONS" {
-			return
-		}
-		if r.Method == http.MethodGet {
-			// ★ SearchControllerのGetMeメソッドを呼び出す
-			searchController.GetMe(w, r)
-		} else {
-			log.Printf("fail: HTTP Method is %s on /users/me\n", r.Method)
-			w.WriteHeader(http.StatusMethodNotAllowed)
-		}
-	})
+	//Controller
+	registerUserCtrl := controller.NewRegisterUserController(registerUsecase, authClient)
+	searchUserCtrl := controller.NewSearchUserController(searchUsecase, authClient)
+	productRegisterCtrl := controller.NewProductRegisterController(productRegisterUsecase, authClient)
+
+	// --- 3. ルーティング設定 ---
+	mux := router.NewRouter(registerUserCtrl, searchUserCtrl, productRegisterCtrl)
 
 	// シャットダウン処理のセットアップ
 	closeDBWithSysCall()
@@ -106,9 +59,40 @@ func main() {
 	}
 
 	log.Printf("Listening on :%s...", port)
-	if err := http.ListenAndServe(":8000", nil); err != nil {
+	if err := http.ListenAndServe(":"+port, mux); err != nil {
 		log.Fatal(err)
 	}
+}
+
+func initDB() *sql.DB {
+	mysqlUser := os.Getenv("MYSQL_USER")
+	mysqlUserPwd := os.Getenv("MYSQL_PASSWORD")
+	mysqlDatabase := os.Getenv("MYSQL_DATABASE")
+	mysqlHost := os.Getenv("MYSQL_HOST")
+	dsn := fmt.Sprintf("%s:%s@%s/%s?parseTime=true", mysqlUser, mysqlUserPwd, mysqlHost, mysqlDatabase)
+	db, err := sql.Open("mysql", dsn)
+	if err != nil {
+		log.Fatalf("fail: sql.Open, %v\n", err)
+	}
+	if err := db.Ping(); err != nil {
+		log.Fatalf("fail: db.Ping, %v\n", err)
+	}
+	log.Println("Successfully connected to the database!")
+	return db
+}
+
+func initFirebase() *auth.Client {
+	ctx := context.Background()
+	conf := &firebase.Config{ProjectID: "term8-taichi-onishi"}
+	app, err := firebase.NewApp(ctx, conf)
+	if err != nil {
+		log.Fatalf("error initializing app: %v", err)
+	}
+	client, err := app.Auth(ctx)
+	if err != nil {
+		log.Fatalf("error initializing auth client: %v", err)
+	}
+	return client
 }
 
 func closeDBWithSysCall() {

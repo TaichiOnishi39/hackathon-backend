@@ -18,7 +18,7 @@ func NewRegisterUserUsecase(d *dao.UserDao) *RegisterUserUsecase {
 	return &RegisterUserUsecase{UserDao: d}
 }
 
-func (u *RegisterUserUsecase) RegisterUser(req model.UserReqForHTTPPost, firebaseUID string) (*model.UserResForHTTPPost, error) {
+func (u *RegisterUserUsecase) RegisterUser(req model.CreateUserReq, firebaseUID string) (*model.UserRes, error) {
 	// バリデーションロジック
 	if err := req.Validate(); err != nil {
 		return nil, err
@@ -30,13 +30,13 @@ func (u *RegisterUserUsecase) RegisterUser(req model.UserReqForHTTPPost, firebas
 	newIDStr := newID.String()
 
 	// DAOを呼び出して保存
-	userEntity, err := u.UserDao.RegisterUser(newIDStr, firebaseUID, req.Name)
+	userEntity, err := u.UserDao.CreateOrUpdate(newIDStr, firebaseUID, req.Name)
 	if err != nil {
 		return nil, err
 	}
 
-	return &model.UserResForHTTPPost{
-		Id:          userEntity.Id,
+	return &model.UserRes{
+		ID:          userEntity.ID,
 		Name:        userEntity.Name,
 		FirebaseUID: userEntity.FirebaseUID,
 	}, nil

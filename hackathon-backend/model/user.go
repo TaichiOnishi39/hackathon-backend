@@ -5,16 +5,16 @@ import (
 	"fmt"
 )
 
-type UserResForHTTPGet struct {
-	Id          string `json:"id"`
+type User struct {
+	ID          string `json:"id"`
 	Name        string `json:"name"`
 	FirebaseUID string `json:"firebase_uid"`
 }
-type UserReqForHTTPPost struct {
+type CreateUserReq struct {
 	Name string `json:"name"`
 }
 
-func (u *UserReqForHTTPPost) Validate() error {
+func (u *CreateUserReq) Validate() error {
 	if u.Name == "" {
 		return errors.New("name is empty")
 	}
@@ -24,13 +24,8 @@ func (u *UserReqForHTTPPost) Validate() error {
 	return nil
 }
 
-type UserResForHTTPPost struct {
-	Id          string `json:"id"`
-	Name        string `json:"name"`
-	FirebaseUID string `json:"firebase_uid"`
-}
-type User struct {
-	Id          string `json:"id"`
+type UserRes struct {
+	ID          string `json:"id"`
 	Name        string `json:"name"`
 	FirebaseUID string `json:"firebase_uid"`
 }

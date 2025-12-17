@@ -8,24 +8,24 @@ import (
 )
 
 type UserDao struct {
-	DB *sql.DB
+	db *sql.DB
 }
 
 func NewUserDao(db *sql.DB) *UserDao {
-	return &UserDao{DB: db}
+	return &UserDao{db: db}
 }
 
-func (dao *UserDao) FindByName(name string) ([]model.UserResForHTTPGet, error) {
-	rows, err := dao.DB.Query("SELECT id, name, firebase_uid FROM users WHERE name = ?", name)
+func (dao *UserDao) FindByName(name string) ([]model.UserRes, error) {
+	rows, err := dao.db.Query("SELECT id, name, firebase_uid FROM users WHERE name = ?", name)
 	if err != nil {
 		return nil, fmt.Errorf("fail: db.Query, %v", err)
 	}
 	defer rows.Close()
 
-	users := make([]model.UserResForHTTPGet, 0)
+	users := make([]model.UserRes, 0)
 	for rows.Next() {
-		var u model.UserResForHTTPGet
-		if err := rows.Scan(&u.Id, &u.Name, &u.FirebaseUID); err != nil {
+		var u model.UserRes
+		if err := rows.Scan(&u.ID, &u.Name, &u.FirebaseUID); err != nil {
 			return nil, fmt.Errorf("fail: rows.Scan, %v", err)
 		}
 		users = append(users, u)
@@ -33,14 +33,12 @@ func (dao *UserDao) FindByName(name string) ([]model.UserResForHTTPGet, error) {
 	return users, nil
 }
 
-func (dao *UserDao) GetUserByFirebaseUID(firebaseUID string) (*model.User, error) {
+func (dao *UserDao) FindByFirebaseUID(firebaseUID string) (*model.User, error) {
 	var user model.User
-
 	// 1件だけ取得するので QueryRow を使います
-	// MySQLのようなのでプレースホルダは ? のままでOKです
-	row := dao.DB.QueryRow("SELECT id, name, firebase_uid FROM users WHERE firebase_uid = ?", firebaseUID)
+	row := dao.db.QueryRow("SELECT id, name, firebase_uid FROM users WHERE firebase_uid = ?", firebaseUID)
 
-	if err := row.Scan(&user.Id, &user.Name, &user.FirebaseUID); err != nil {
+	if err := row.Scan(&user.ID, &user.Name, &user.FirebaseUID); err != nil {
 		if err == sql.ErrNoRows {
 			// ユーザーが見つからない場合は nil, nil を返す設計にします
 			// (呼び出し元の Usecase や Controller で 404 エラーにするため)
@@ -53,8 +51,8 @@ func (dao *UserDao) GetUserByFirebaseUID(firebaseUID string) (*model.User, error
 	return &user, nil
 }
 
-func (dao *UserDao) RegisterUser(ulid string, firebaseUID string, name string) (*model.User, error) {
-	tx, err := dao.DB.Begin()
+func (dao *UserDao) CreateOrUpdate(ulid string, firebaseUID string, name string) (*model.User, error) {
+	tx, err := dao.db.Begin()
 	if err != nil {
 		return nil, fmt.Errorf("fail: db.Begin, %v", err)
 	}
@@ -73,9 +71,10 @@ func (dao *UserDao) RegisterUser(ulid string, firebaseUID string, name string) (
 
 	// 2. 実際にDBに入っているIDを取得する
 	// (新規作成ならさっきのULID、既存なら昔作られたULIDが返ってくる)
+	// 確定したユーザー情報を取得して返す
 	var user model.User
 	err = tx.QueryRow("SELECT id, name, firebase_uid FROM users WHERE firebase_uid = ?", firebaseUID).
-		Scan(&user.Id, &user.Name, &user.FirebaseUID)
+		Scan(&user.ID, &user.Name, &user.FirebaseUID)
 	if err != nil {
 		return nil, fmt.Errorf("fail: tx.QueryRow, %v", err)
 	}
