@@ -1,6 +1,7 @@
 package usecase
 
 import (
+	"context"
 	"errors"
 	"io"
 	"math/rand"
@@ -48,7 +49,8 @@ func (u *ProductRegisterUsecase) RegisterProduct(firebaseUID, name, description 
 		// 例: products/01HXYZ..._cat.jpg
 		uploadPath := "products/" + productID + "_" + imageFilename
 
-		path, err := u.StorageService.Upload(nil, imageFile, uploadPath) // contextは一旦nil
+		ctx := context.Background()
+		path, err := u.StorageService.Upload(ctx, imageFile, uploadPath)
 		if err != nil {
 			return nil, err
 		}
