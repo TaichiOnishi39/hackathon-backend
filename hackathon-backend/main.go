@@ -49,6 +49,7 @@ func main() {
 	userDAO := dao.NewUserDao(db)
 	productDAO := dao.NewProductDAO(db)
 	messageDAO := dao.NewMessageDao(db)
+	likeDAO := dao.NewLikeDao(db)
 
 	//Usecase
 	registerUsecase := usecase.NewRegisterUserUsecase(userDAO)
@@ -60,6 +61,7 @@ func main() {
 	productDetailUsecase := usecase.NewProductDetailUsecase(productDAO, storageService)
 	productPurchaseUsecase := usecase.NewProductPurchaseUsecase(productDAO, userDAO)
 	messageUsecase := usecase.NewMessageUsecase(messageDAO, userDAO)
+	productLikeUsecase := usecase.NewProductLikeUsecase(likeDAO, userDAO)
 
 	//Controller
 	registerUserCtrl := controller.NewRegisterUserController(registerUsecase, authClient)
@@ -71,6 +73,7 @@ func main() {
 	productDetailCtrl := controller.NewProductDetailController(productDetailUsecase, authClient)
 	productPurchaseCtrl := controller.NewProductPurchaseController(productPurchaseUsecase, authClient)
 	messageCtrl := controller.NewMessageController(messageUsecase, authClient)
+	productLikeCtrl := controller.NewProductLikeController(productLikeUsecase, authClient)
 
 	// --- 3. ルーティング設定 ---
 	mux := router.NewRouter(
@@ -83,6 +86,7 @@ func main() {
 		productDetailCtrl,
 		productPurchaseCtrl,
 		messageCtrl,
+		productLikeCtrl,
 	)
 
 	// シャットダウン処理のセットアップ
