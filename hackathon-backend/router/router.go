@@ -17,6 +17,7 @@ func NewRouter(
 	productPurchaseCtrl *controller.ProductPurchaseController,
 	messageCtrl *controller.MessageController,
 	productLikeCtrl *controller.ProductLikeController,
+	userUpdateCtrl *controller.UserUpdateController,
 ) http.Handler {
 	mux := http.NewServeMux()
 
@@ -44,9 +45,12 @@ func NewRouter(
 		if !enableCORS(w, r) {
 			return
 		}
-		if r.Method == http.MethodGet {
+		switch r.Method {
+		case http.MethodGet:
 			searchUserCtrl.HandleGetMe(w, r)
-		} else {
+		case http.MethodPut: // ★追加: 更新はPUT
+			userUpdateCtrl.HandleUpdate(w, r)
+		default:
 			w.WriteHeader(http.StatusMethodNotAllowed)
 		}
 	})

@@ -9,6 +9,7 @@ type User struct {
 	ID          string `json:"id"`
 	Name        string `json:"name"`
 	FirebaseUID string `json:"firebase_uid"`
+	Bio         string `json:"bio"`
 }
 type CreateUserReq struct {
 	Name string `json:"name"`
@@ -28,4 +29,9 @@ type UserRes struct {
 	ID          string `json:"id"`
 	Name        string `json:"name"`
 	FirebaseUID string `json:"firebase_uid"`
+}
+
+type UpdateUserReq struct {
+	Name string `json:"name"`
+	Bio  string `json:"bio"`
 }
