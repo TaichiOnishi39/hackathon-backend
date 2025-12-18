@@ -30,3 +30,10 @@ type GenerateReq struct {
 type GenerateRes struct {
 	Description string `json:"description"`
 }
+
+type GenerateImageRes struct {
+	Name        string `json:"name"`
+	Price       int    `json:"price"`
+	Keywords    string `json:"keywords"`
+	Description string `json:"description"`
+}

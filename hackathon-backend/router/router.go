@@ -182,6 +182,18 @@ func NewRouter(
 		}
 	})
 
+	// AI生成 (画像から)
+	mux.HandleFunc("/products/generate-from-image", func(w http.ResponseWriter, r *http.Request) {
+		if !enableCORS(w, r) {
+			return
+		}
+		if r.Method == http.MethodPost {
+			productDescCtrl.HandleGenerateFromImage(w, r)
+		} else {
+			w.WriteHeader(http.StatusMethodNotAllowed)
+		}
+	})
+
 	return mux
 }
 
