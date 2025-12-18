@@ -18,6 +18,7 @@ func NewRouter(
 	messageCtrl *controller.MessageController,
 	productLikeCtrl *controller.ProductLikeController,
 	userUpdateCtrl *controller.UserUpdateController,
+	productDescCtrl *controller.ProductDescriptionController,
 ) http.Handler {
 	mux := http.NewServeMux()
 
@@ -166,6 +167,18 @@ func NewRouter(
 		}
 		if r.Method == http.MethodGet {
 			productSearchCtrl.HandleGetLiked(w, r)
+		}
+	})
+
+	// ★AI生成エンドポイント
+	mux.HandleFunc("/products/generate-description", func(w http.ResponseWriter, r *http.Request) {
+		if !enableCORS(w, r) {
+			return
+		}
+		if r.Method == http.MethodPost {
+			productDescCtrl.HandleGenerate(w, r)
+		} else {
+			w.WriteHeader(http.StatusMethodNotAllowed)
 		}
 	})
 

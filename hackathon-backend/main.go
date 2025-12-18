@@ -44,6 +44,15 @@ func main() {
 
 	bucketName := os.Getenv("GCS_BUCKET_NAME")
 	storageService := service.NewStorageService(gcsClient, bucketName)
+	
+	projectID := "term8-taichi-onishi"
+	location := "asia-northeast1"
+	modelName := "gemini-2.5-flash"
+	geminiService, err := service.NewGeminiService(ctx, projectID, location, modelName)
+	if err != nil {
+		log.Fatalf("failed to init gemini: %v", err)
+	}
+	defer geminiService.Close()
 
 	//DAO
 	userDAO := dao.NewUserDao(db)
@@ -63,6 +72,7 @@ func main() {
 	messageUsecase := usecase.NewMessageUsecase(messageDAO, userDAO)
 	productLikeUsecase := usecase.NewProductLikeUsecase(likeDAO, userDAO)
 	userUpdateUsecase := usecase.NewUserUpdateUsecase(userDAO)
+	productDescUsecase := usecase.NewProductDescriptionUsecase(geminiService)
 
 	//Controller
 	registerUserCtrl := controller.NewRegisterUserController(registerUsecase, authClient)
@@ -76,6 +86,7 @@ func main() {
 	messageCtrl := controller.NewMessageController(messageUsecase, authClient)
 	productLikeCtrl := controller.NewProductLikeController(productLikeUsecase, authClient)
 	userUpdateCtrl := controller.NewUserUpdateController(userUpdateUsecase, authClient)
+	productDescCtrl := controller.NewProductDescriptionController(productDescUsecase, authClient)
 
 	// --- 3. ルーティング設定 ---
 	mux := router.NewRouter(
@@ -90,6 +101,7 @@ func main() {
 		messageCtrl,
 		productLikeCtrl,
 		userUpdateCtrl,
+		productDescCtrl,
 	)
 
 	// シャットダウン処理のセットアップ
