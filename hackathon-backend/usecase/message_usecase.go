@@ -87,6 +87,15 @@ func (u *MessageUsecase) GetChatList(myFirebaseUID string) ([]*model.ChatListRes
 		return nil, err
 	}
 
+	//  未読数の集計マップを作る
+	unreadCounts := make(map[string]int)
+	for _, msg := range allMessages {
+		// 自分が受信者 かつ まだ読んでいない(false)場合
+		if msg.ReceiverID == me.ID && !msg.IsRead {
+			unreadCounts[msg.SenderID]++
+		}
+	}
+
 	// 3. 相手ごとに集約する
 	var chatList []*model.ChatListRes
 	processedPartners := make(map[string]bool) // 既に処理した相手IDを記録
@@ -116,6 +125,7 @@ func (u *MessageUsecase) GetChatList(myFirebaseUID string) ([]*model.ChatListRes
 				PartnerName: partnerName,
 				LastMessage: msg.Content,
 				LastTime:    msg.CreatedAt,
+				UnreadCount: unreadCounts[partnerID],
 			})
 
 			processedPartners[partnerID] = true
@@ -123,4 +133,13 @@ func (u *MessageUsecase) GetChatList(myFirebaseUID string) ([]*model.ChatListRes
 	}
 
 	return chatList, nil
+}
+
+// 既読にする処理
+func (u *MessageUsecase) MarkAsRead(myFirebaseUID, partnerID string) error {
+	me, err := u.UserDAO.FindByFirebaseUID(myFirebaseUID)
+	if err != nil || me == nil {
+		return errors.New("user not found")
+	}
+	return u.MessageDAO.MarkAsRead(me.ID, partnerID)
 }

@@ -88,3 +88,25 @@ func (c *MessageController) HandleGetChatList(w http.ResponseWriter, r *http.Req
 
 	c.respondJSON(w, http.StatusOK, chatList)
 }
+
+// POST /messages/read?partner_id=相手のID
+func (c *MessageController) HandleMarkAsRead(w http.ResponseWriter, r *http.Request) {
+	firebaseUID, err := c.verifyToken(r)
+	if err != nil {
+		c.respondError(w, http.StatusUnauthorized, err)
+		return
+	}
+
+	partnerID := r.URL.Query().Get("partner_id")
+	if partnerID == "" {
+		c.respondError(w, http.StatusBadRequest, nil)
+		return
+	}
+
+	if err := c.Usecase.MarkAsRead(firebaseUID, partnerID); err != nil {
+		c.respondError(w, http.StatusInternalServerError, err)
+		return
+	}
+
+	c.respondJSON(w, http.StatusOK, map[string]string{"status": "ok"})
+}

@@ -95,7 +95,7 @@ func NewRouter(
 			productSearchCtrl.HandleGetByUserID(w, r)
 		}
 	})
-	
+
 	mux.HandleFunc("/users/{id}", func(w http.ResponseWriter, r *http.Request) {
 		if !enableCORS(w, r) {
 			return
@@ -139,6 +139,18 @@ func NewRouter(
 		}
 		if r.Method == http.MethodGet {
 			messageCtrl.HandleGetChatList(w, r)
+		} else {
+			w.WriteHeader(http.StatusMethodNotAllowed)
+		}
+	})
+
+	// /messages/read
+	mux.HandleFunc("/messages/read", func(w http.ResponseWriter, r *http.Request) {
+		if !enableCORS(w, r) {
+			return
+		}
+		if r.Method == http.MethodPost {
+			messageCtrl.HandleMarkAsRead(w, r)
 		} else {
 			w.WriteHeader(http.StatusMethodNotAllowed)
 		}
