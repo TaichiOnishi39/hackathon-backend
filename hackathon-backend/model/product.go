@@ -19,3 +19,14 @@ type ProductReq struct {
 	Price       int    `json:"price"`
 	Description string `json:"description"`
 }
+
+// AI商品説明生成のリクエスト
+type GenerateReq struct {
+	Name     string `json:"name"`
+	Keywords string `json:"keywords"`
+}
+
+// AI商品説明生成のレスポンス
+type GenerateRes struct {
+	Description string `json:"description"`
+}
