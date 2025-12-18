@@ -36,6 +36,10 @@ func (u *ProductDescriptionUsecase) Generate(ctx context.Context, name, keywords
 - 丁寧語（です・ます調）を使う
 - 200文字以内で簡潔にまとめる
 - ハッシュタグを含める
+
+【重要：出力形式】
+- 生成された説明文のみを出力してください。
+- 「はい、承知いたしました」や「以下の通り作成しました」などの挨拶や前置きは一切不要です。
 `, name, keywords)
 
 	return u.GeminiService.GenerateDescription(ctx, prompt)
