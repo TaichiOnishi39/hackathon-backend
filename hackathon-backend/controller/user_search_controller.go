@@ -50,12 +50,31 @@ func (c *SearchUserController) HandleGetMe(w http.ResponseWriter, r *http.Reques
 		c.respondError(w, http.StatusInternalServerError, err)
 		return
 	}
-	
+
 	if user == nil {
 		// 404 Not Found を返す (これでフロントエンドが「未登録だ」と気づける)
 		c.respondError(w, http.StatusNotFound, fmt.Errorf("user not found"))
 		return
 	}
 
+	c.respondJSON(w, http.StatusOK, user)
+}
+
+// ★追加: GET /users/{id}
+func (c *SearchUserController) HandleGetUser(w http.ResponseWriter, r *http.Request) {
+	// URLパラメータからIDを取得 (例: /users/01HXYZ...)
+	userID := r.PathValue("id")
+
+	user, err := c.Usecase.GetUserByID(userID)
+	if err != nil {
+		c.respondError(w, http.StatusInternalServerError, err)
+		return
+	}
+	if user == nil {
+		c.respondError(w, http.StatusNotFound, nil) // ユーザーがいない場合
+		return
+	}
+
+	// 公開して良い情報だけ返すのが理想ですが、現状のUserモデル(名前, Bio, ID)ならそのまま返してOK
 	c.respondJSON(w, http.StatusOK, user)
 }

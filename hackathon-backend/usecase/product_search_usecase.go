@@ -35,6 +35,11 @@ func (u *ProductSearchUsecase) SearchProduct(keyword string) ([]*model.Product, 
 	return u.processProducts(products, err)
 }
 
+func (u *ProductSearchUsecase) GetProductsByUserID(userID string) ([]*model.Product, error) {
+	// 指定されたIDで直接検索
+	return u.processProducts(u.ProductDAO.FindByUserID(userID))
+}
+
 func (u *ProductSearchUsecase) GetSellingProducts(firebaseUID string) ([]*model.Product, error) {
 	user, err := u.UserDAO.FindByFirebaseUID(firebaseUID)
 	if err != nil || user == nil {
