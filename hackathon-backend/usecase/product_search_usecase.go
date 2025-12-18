@@ -21,47 +21,78 @@ func NewProductSearchUsecase(pDAO *dao.ProductDao, uDAO *dao.UserDao, sService *
 	}
 }
 
-// SearchProduct は商品を検索します（キーワードが空なら全件）(新着順)
-func (u *ProductSearchUsecase) SearchProduct(keyword string) ([]*model.Product, error) {
+// 内部用ヘルパー: FirebaseUID から 内部UserID を取得する (未ログインなら空文字)
+func (u *ProductSearchUsecase) getInternalUserID(firebaseUID string) string {
+	if firebaseUID == "" {
+		return ""
+	}
+	user, err := u.UserDAO.FindByFirebaseUID(firebaseUID)
+	if err != nil || user == nil {
+		return ""
+	}
+	return user.ID
+}
+
+// SearchProduct: 商品検索
+func (u *ProductSearchUsecase) SearchProduct(keyword string, viewerFirebaseUID string) ([]*model.Product, error) {
+	// 見ている人のIDを特定
+	currentUserID := u.getInternalUserID(viewerFirebaseUID)
+
 	var products []*model.Product
 	var err error
-	// 1. DBから取得
+
+	// DAOには常に currentUserID を渡す
 	if keyword == "" {
-		products, err = u.ProductDAO.FindAll()
+		products, err = u.ProductDAO.FindAll(currentUserID)
 	} else {
-		products, err = u.ProductDAO.FindByName(keyword)
+		products, err = u.ProductDAO.FindByName(keyword, currentUserID)
 	}
 
 	return u.processProducts(products, err)
 }
 
-func (u *ProductSearchUsecase) GetProductsByUserID(userID string) ([]*model.Product, error) {
-	// 指定されたIDで直接検索
-	return u.processProducts(u.ProductDAO.FindByUserID(userID))
+// GetProductsByUserID: 特定のユーザーの商品一覧
+func (u *ProductSearchUsecase) GetProductsByUserID(targetUserID string, viewerFirebaseUID string) ([]*model.Product, error) {
+	currentUserID := u.getInternalUserID(viewerFirebaseUID)
+	return u.processProducts(u.ProductDAO.FindByUserID(targetUserID, currentUserID))
 }
 
-func (u *ProductSearchUsecase) GetSellingProducts(firebaseUID string) ([]*model.Product, error) {
-	user, err := u.UserDAO.FindByFirebaseUID(firebaseUID)
-	if err != nil || user == nil {
+// GetSellingProducts: 出品している商品 (targetFirebaseUID: 出品者, viewerFirebaseUID: 見ている人)
+func (u *ProductSearchUsecase) GetSellingProducts(targetFirebaseUID string, viewerFirebaseUID string) ([]*model.Product, error) {
+	// 出品者を特定
+	targetUser, err := u.UserDAO.FindByFirebaseUID(targetFirebaseUID)
+	if err != nil || targetUser == nil {
 		return nil, errors.New("user not found")
 	}
-	return u.processProducts(u.ProductDAO.FindByUserID(user.ID))
+
+	// 見ている人を特定
+	currentUserID := u.getInternalUserID(viewerFirebaseUID)
+
+	return u.processProducts(u.ProductDAO.FindByUserID(targetUser.ID, currentUserID))
 }
 
-func (u *ProductSearchUsecase) GetPurchasedProducts(firebaseUID string) ([]*model.Product, error) {
-	user, err := u.UserDAO.FindByFirebaseUID(firebaseUID)
-	if err != nil || user == nil {
+// GetPurchasedProducts: 購入した商品 (targetFirebaseUID: 購入者, viewerFirebaseUID: 見ている人)
+func (u *ProductSearchUsecase) GetPurchasedProducts(targetFirebaseUID string, viewerFirebaseUID string) ([]*model.Product, error) {
+	targetUser, err := u.UserDAO.FindByFirebaseUID(targetFirebaseUID)
+	if err != nil || targetUser == nil {
 		return nil, errors.New("user not found")
 	}
-	return u.processProducts(u.ProductDAO.FindByBuyerID(user.ID))
+
+	currentUserID := u.getInternalUserID(viewerFirebaseUID)
+
+	return u.processProducts(u.ProductDAO.FindByBuyerID(targetUser.ID, currentUserID))
 }
 
-func (u *ProductSearchUsecase) GetLikedProducts(firebaseUID string) ([]*model.Product, error) {
-	user, err := u.UserDAO.FindByFirebaseUID(firebaseUID)
-	if err != nil || user == nil {
+// GetLikedProducts: いいねした商品 (targetFirebaseUID: いいねした人, viewerFirebaseUID: 見ている人)
+func (u *ProductSearchUsecase) GetLikedProducts(targetFirebaseUID string, viewerFirebaseUID string) ([]*model.Product, error) {
+	targetUser, err := u.UserDAO.FindByFirebaseUID(targetFirebaseUID)
+	if err != nil || targetUser == nil {
 		return nil, errors.New("user not found")
 	}
-	return u.processProducts(u.ProductDAO.FindLikedProducts(user.ID))
+
+	currentUserID := u.getInternalUserID(viewerFirebaseUID)
+
+	return u.processProducts(u.ProductDAO.FindLikedProducts(targetUser.ID, currentUserID))
 }
 
 // 共通処理: DBから取った商品の画像URLを変換して返す

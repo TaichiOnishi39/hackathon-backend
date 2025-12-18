@@ -21,24 +21,37 @@ func NewProductSearchController(u *usecase.ProductSearchUsecase, auth *auth.Clie
 
 // HandleListProducts が GET /products の処理です
 func (c *ProductSearchController) HandleListProducts(w http.ResponseWriter, r *http.Request) {
+	// ★追加: ログインしていれば閲覧者IDを取得（未ログインなら空文字）
+	viewerID := ""
+	if uid, err := c.verifyToken(r); err == nil {
+		viewerID = uid
+	}
+
 	keyword := r.URL.Query().Get("q")
-	// Usecase から商品一覧を取得
-	products, err := c.Usecase.SearchProduct(keyword)
+
+	// ★引数に viewerID を追加して呼び出し
+	products, err := c.Usecase.SearchProduct(keyword, viewerID)
 	if err != nil {
 		c.respondError(w, http.StatusInternalServerError, err)
 		return
 	}
 
-	// 取得したリストをJSONで返す
 	c.respondJSON(w, http.StatusOK, products)
 }
 
 // GET /users/{id}/products (公開ユーザーページ用)
 func (c *ProductSearchController) HandleGetByUserID(w http.ResponseWriter, r *http.Request) {
+	// ★追加: 閲覧者IDを取得
+	viewerID := ""
+	if uid, err := c.verifyToken(r); err == nil {
+		viewerID = uid
+	}
+
 	// URLのパスパラメータからIDを取得
 	userID := r.PathValue("id")
 
-	products, err := c.Usecase.GetProductsByUserID(userID)
+	// ★引数に viewerID を追加
+	products, err := c.Usecase.GetProductsByUserID(userID, viewerID)
 	if err != nil {
 		c.respondError(w, http.StatusInternalServerError, err)
 		return
@@ -53,7 +66,9 @@ func (c *ProductSearchController) HandleGetSelling(w http.ResponseWriter, r *htt
 		c.respondError(w, http.StatusUnauthorized, err)
 		return
 	}
-	products, err := c.Usecase.GetSellingProducts(firebaseUID)
+
+	// ★自分が出品者(target)であり、閲覧者(viewer)でもある
+	products, err := c.Usecase.GetSellingProducts(firebaseUID, firebaseUID)
 	if err != nil {
 		c.respondError(w, http.StatusInternalServerError, err)
 		return
@@ -68,7 +83,9 @@ func (c *ProductSearchController) HandleGetPurchased(w http.ResponseWriter, r *h
 		c.respondError(w, http.StatusUnauthorized, err)
 		return
 	}
-	products, err := c.Usecase.GetPurchasedProducts(firebaseUID)
+
+	// ★自分が購入者(target)であり、閲覧者(viewer)でもある
+	products, err := c.Usecase.GetPurchasedProducts(firebaseUID, firebaseUID)
 	if err != nil {
 		c.respondError(w, http.StatusInternalServerError, err)
 		return
@@ -83,7 +100,9 @@ func (c *ProductSearchController) HandleGetLiked(w http.ResponseWriter, r *http.
 		c.respondError(w, http.StatusUnauthorized, err)
 		return
 	}
-	products, err := c.Usecase.GetLikedProducts(firebaseUID)
+
+	// ★自分がいいねした人(target)であり、閲覧者(viewer)でもある
+	products, err := c.Usecase.GetLikedProducts(firebaseUID, firebaseUID)
 	if err != nil {
 		c.respondError(w, http.StatusInternalServerError, err)
 		return
