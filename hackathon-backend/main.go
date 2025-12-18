@@ -44,7 +44,7 @@ func main() {
 
 	bucketName := os.Getenv("GCS_BUCKET_NAME")
 	storageService := service.NewStorageService(gcsClient, bucketName)
-	
+
 	projectID := "term8-taichi-onishi"
 	location := "asia-northeast1"
 	modelName := "gemini-2.5-flash"
@@ -67,7 +67,7 @@ func main() {
 	productSearchUsecase := usecase.NewProductSearchUsecase(productDAO, userDAO, storageService)
 	productDeleteUsecase := usecase.NewProductDeleteUsecase(productDAO, userDAO)
 	productUpdateUsecase := usecase.NewProductUpdateUsecase(productDAO, userDAO)
-	productDetailUsecase := usecase.NewProductDetailUsecase(productDAO, storageService)
+	productDetailUsecase := usecase.NewProductDetailUsecase(productDAO, userDAO, storageService)
 	productPurchaseUsecase := usecase.NewProductPurchaseUsecase(productDAO, userDAO)
 	messageUsecase := usecase.NewMessageUsecase(messageDAO, userDAO)
 	productLikeUsecase := usecase.NewProductLikeUsecase(likeDAO, userDAO)
