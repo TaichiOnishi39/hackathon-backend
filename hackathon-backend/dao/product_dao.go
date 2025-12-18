@@ -71,7 +71,7 @@ func (d *ProductDao) FindByID(productID, currentUserID string) (*model.Product, 
 		SELECT 
 			p.id, p.name, p.price, p.description, p.user_id, 
 			COALESCE(p.image_url, ''), p.created_at, p.buyer_id, u.name,
-			(SELECT COUNT(*) FROM likes WHERE product_id = p.id) as like_count
+			(SELECT COUNT(*) FROM likes WHERE product_id = p.id) as like_count,
 			EXISTS(SELECT 1 FROM likes WHERE product_id = p.id AND user_id = ?) as is_liked
 		FROM products p
 		JOIN users u ON p.user_id = u.id
