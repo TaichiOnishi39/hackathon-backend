@@ -231,7 +231,18 @@ func (d *ProductDao) Update(productID string, userID string, name string, price 
 		return err
 	}
 	if rowsAffected == 0 {
-		return sql.ErrNoRows // 対象なし（権限なし含む）
+		// 本当に存在しない（または権限がない）のか、値が変わらなかっただけなのかを確認
+		var exists int
+		checkQuery := "SELECT 1 FROM products WHERE id = ? AND user_id = ?"
+		err := d.db.QueryRow(checkQuery, productID, userID).Scan(&exists)
+
+		if err == sql.ErrNoRows {
+			return sql.ErrNoRows // 本当になかった
+		} else if err != nil {
+			return err // その他のエラー
+		}
+		// エラーがなければ「商品はあるけど変更なし」なので成功(nil)を返す
+		return nil
 	}
 
 	return nil
