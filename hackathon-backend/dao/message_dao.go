@@ -16,10 +16,10 @@ func NewMessageDao(db *sql.DB) *MessageDao {
 // Create: メッセージを保存
 func (d *MessageDao) Create(msg *model.Message) error {
 	query := `
-		INSERT INTO messages (id, sender_id, receiver_id, content, created_at)
-		VALUES (?, ?, ?, ?, ?)
+		INSERT INTO messages (id, sender_id, receiver_id, content, created_at, product_id)
+		VALUES (?, ?, ?, ?, ?, ?)
 	`
-	_, err := d.db.Exec(query, msg.ID, msg.SenderID, msg.ReceiverID, msg.Content, msg.CreatedAt)
+	_, err := d.db.Exec(query, msg.ID, msg.SenderID, msg.ReceiverID, msg.Content, msg.CreatedAt, msg.ProductID)
 	return err
 }
 
@@ -27,11 +27,14 @@ func (d *MessageDao) Create(msg *model.Message) error {
 func (d *MessageDao) GetMessagesBetween(userA, userB string) ([]*model.Message, error) {
 	// Aが送ってBが受け取った or Bが送ってAが受け取った メッセージを取得
 	query := `
-		SELECT id, sender_id, receiver_id, content, created_at
-		FROM messages
-		WHERE (sender_id = ? AND receiver_id = ?) 
-		   OR (sender_id = ? AND receiver_id = ?)
-		ORDER BY created_at ASC
+	   SELECT 
+           m.id, m.sender_id, m.receiver_id, m.content, m.created_at, 
+           m.product_id, p.name
+       FROM messages m
+       LEFT JOIN products p ON m.product_id = p.id
+       WHERE (m.sender_id = ? AND m.receiver_id = ?) 
+          OR (m.sender_id = ? AND m.receiver_id = ?)
+       ORDER BY m.created_at ASC
 	`
 	rows, err := d.db.Query(query, userA, userB, userB, userA)
 	if err != nil {
@@ -42,8 +45,17 @@ func (d *MessageDao) GetMessagesBetween(userA, userB string) ([]*model.Message, 
 	var messages []*model.Message
 	for rows.Next() {
 		m := &model.Message{}
-		if err := rows.Scan(&m.ID, &m.SenderID, &m.ReceiverID, &m.Content, &m.CreatedAt); err != nil {
+		var productID sql.NullString
+		var productName sql.NullString
+		if err := rows.Scan(&m.ID, &m.SenderID, &m.ReceiverID, &m.Content, &m.CreatedAt, &productID, &productName); err != nil {
 			return nil, err
+		}
+
+		if productID.Valid {
+			m.ProductID = productID.String
+		}
+		if productName.Valid {
+			m.ProductName = productName.String
 		}
 		messages = append(messages, m)
 	}
@@ -53,10 +65,13 @@ func (d *MessageDao) GetMessagesBetween(userA, userB string) ([]*model.Message, 
 // FindAllByUserID: 自分に関係する全てのメッセージを新しい順に取得
 func (d *MessageDao) FindAllByUserID(userID string) ([]*model.Message, error) {
 	query := `
-		SELECT id, sender_id, receiver_id, content, created_at 
-		FROM messages 
-		WHERE sender_id = ? OR receiver_id = ? 
-		ORDER BY created_at DESC
+	   SELECT 
+           m.id, m.sender_id, m.receiver_id, m.content, m.created_at,
+           m.product_id, p.name
+       FROM messages m
+       LEFT JOIN products p ON m.product_id = p.id
+       WHERE m.sender_id = ? OR m.receiver_id = ? 
+       ORDER BY m.created_at DESC
 	`
 	rows, err := d.db.Query(query, userID, userID)
 	if err != nil {
@@ -67,8 +82,17 @@ func (d *MessageDao) FindAllByUserID(userID string) ([]*model.Message, error) {
 	var messages []*model.Message
 	for rows.Next() {
 		m := &model.Message{}
-		if err := rows.Scan(&m.ID, &m.SenderID, &m.ReceiverID, &m.Content, &m.CreatedAt); err != nil {
+		var productID sql.NullString
+		var productName sql.NullString
+		if err := rows.Scan(&m.ID, &m.SenderID, &m.ReceiverID, &m.Content, &m.CreatedAt, &productID, &productName); err != nil {
 			return nil, err
+		}
+
+		if productID.Valid {
+			m.ProductID = productID.String
+		}
+		if productName.Valid {
+			m.ProductName = productName.String
 		}
 		messages = append(messages, m)
 	}
