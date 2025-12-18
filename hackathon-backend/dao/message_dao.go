@@ -16,10 +16,10 @@ func NewMessageDao(db *sql.DB) *MessageDao {
 // Create: メッセージを保存
 func (d *MessageDao) Create(msg *model.Message) error {
 	query := `
-		INSERT INTO messages (id, sender_id, receiver_id, content, created_at, product_id)
-		VALUES (?, ?, ?, ?, ?, ?)
+		INSERT INTO messages (id, sender_id, receiver_id, content, created_at, product_id, is_read)
+		VALUES (?, ?, ?, ?, ?, ?, ?)
 	`
-	_, err := d.db.Exec(query, msg.ID, msg.SenderID, msg.ReceiverID, msg.Content, msg.CreatedAt, msg.ProductID)
+	_, err := d.db.Exec(query, msg.ID, msg.SenderID, msg.ReceiverID, msg.Content, msg.CreatedAt, msg.ProductID, msg.IsRead)
 	return err
 }
 
@@ -29,7 +29,7 @@ func (d *MessageDao) GetMessagesBetween(userA, userB string) ([]*model.Message, 
 	query := `
 	   SELECT 
            m.id, m.sender_id, m.receiver_id, m.content, m.created_at, 
-           m.product_id, p.name
+           m.product_id, p.name, m.is_read
        FROM messages m
        LEFT JOIN products p ON m.product_id = p.id
        WHERE (m.sender_id = ? AND m.receiver_id = ?) 
@@ -47,7 +47,7 @@ func (d *MessageDao) GetMessagesBetween(userA, userB string) ([]*model.Message, 
 		m := &model.Message{}
 		var productID sql.NullString
 		var productName sql.NullString
-		if err := rows.Scan(&m.ID, &m.SenderID, &m.ReceiverID, &m.Content, &m.CreatedAt, &productID, &productName); err != nil {
+		if err := rows.Scan(&m.ID, &m.SenderID, &m.ReceiverID, &m.Content, &m.CreatedAt, &productID, &productName, &m.IsRead); err != nil {
 			return nil, err
 		}
 
@@ -67,7 +67,7 @@ func (d *MessageDao) FindAllByUserID(userID string) ([]*model.Message, error) {
 	query := `
 	   SELECT 
            m.id, m.sender_id, m.receiver_id, m.content, m.created_at,
-           m.product_id, p.name
+           m.product_id, p.name, m.is_read
        FROM messages m
        LEFT JOIN products p ON m.product_id = p.id
        WHERE m.sender_id = ? OR m.receiver_id = ? 
@@ -84,7 +84,7 @@ func (d *MessageDao) FindAllByUserID(userID string) ([]*model.Message, error) {
 		m := &model.Message{}
 		var productID sql.NullString
 		var productName sql.NullString
-		if err := rows.Scan(&m.ID, &m.SenderID, &m.ReceiverID, &m.Content, &m.CreatedAt, &productID, &productName); err != nil {
+		if err := rows.Scan(&m.ID, &m.SenderID, &m.ReceiverID, &m.Content, &m.CreatedAt, &productID, &productName, &m.IsRead); err != nil {
 			return nil, err
 		}
 
@@ -97,4 +97,12 @@ func (d *MessageDao) FindAllByUserID(userID string) ([]*model.Message, error) {
 		messages = append(messages, m)
 	}
 	return messages, nil
+}
+
+// 特定の相手からのメッセージを全て既読にする
+func (d *MessageDao) MarkAsRead(myUserID, partnerID string) error {
+	// 自分が受信者(Receiver)で、相手が送信者(Sender)のメッセージを既読(TRUE)にする
+	query := `UPDATE messages SET is_read = TRUE WHERE receiver_id = ? AND sender_id = ? AND is_read = FALSE`
+	_, err := d.db.Exec(query, myUserID, partnerID)
+	return err
 }

@@ -9,6 +9,7 @@ type Message struct {
 	Content     string    `json:"content"`
 	ProductID   string    `json:"product_id,omitempty"`
 	ProductName string    `json:"product_name,omitempty"`
+	IsRead      bool      `json:"is_read"`
 	CreatedAt   time.Time `json:"created_at"`
 }
 
@@ -25,4 +26,5 @@ type ChatListRes struct {
 	PartnerName string    `json:"partner_name"`
 	LastMessage string    `json:"last_message"`
 	LastTime    time.Time `json:"last_time"`
+	UnreadCount int       `json:"unread_count"`
 }
