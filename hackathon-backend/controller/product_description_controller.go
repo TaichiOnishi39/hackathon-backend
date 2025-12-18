@@ -1,9 +1,12 @@
 package controller
 
 import (
+	"bytes"
 	"encoding/json"
+	"fmt"
 	"hackathon-backend/model"
 	"hackathon-backend/usecase"
+	"io"
 	"net/http"
 
 	"firebase.google.com/go/auth"
@@ -49,4 +52,44 @@ func (c *ProductDescriptionController) HandleGenerate(w http.ResponseWriter, r *
 	}
 
 	c.respondJSON(w, http.StatusOK, model.GenerateRes{Description: desc})
+}
+
+// ★追加: 画像アップロード解析ハンドラ
+func (c *ProductDescriptionController) HandleGenerateFromImage(w http.ResponseWriter, r *http.Request) {
+	_, err := c.verifyToken(r)
+	if err != nil {
+		c.respondError(w, http.StatusUnauthorized, err)
+		return
+	}
+
+	// 1. 画像ファイルの取得 (form key: "image")
+	file, header, err := r.FormFile("image")
+	if err != nil {
+		c.respondError(w, http.StatusBadRequest, fmt.Errorf("failed to get image file: %w", err))
+		return
+	}
+	defer file.Close()
+
+	// 2. 画像データをバイト列に読み込む
+	var buf bytes.Buffer
+	if _, err := io.Copy(&buf, file); err != nil {
+		c.respondError(w, http.StatusInternalServerError, err)
+		return
+	}
+
+	// 3. MIMEタイプの取得
+	mimeType := header.Header.Get("Content-Type")
+	if mimeType == "" {
+		mimeType = "image/jpeg" // デフォルト
+	}
+
+	// 4. Usecase実行
+	res, err := c.Usecase.GenerateInfoFromImage(r.Context(), buf.Bytes(), mimeType)
+	if err != nil {
+		c.respondError(w, http.StatusInternalServerError, err)
+		return
+	}
+
+	// 5. 結果を返す
+	c.respondJSON(w, http.StatusOK, res)
 }

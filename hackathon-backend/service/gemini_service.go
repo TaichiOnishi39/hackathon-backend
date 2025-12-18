@@ -57,6 +57,34 @@ func (s *GeminiService) GenerateDescription(ctx context.Context, promptText stri
 	return sb.String(), nil
 }
 
+// 画像を渡して生成
+func (s *GeminiService) GenerateFromImage(ctx context.Context, promptText string, imgData []byte, mimeType string) (string, error) {
+	model := s.client.GenerativeModel(s.modelName)
+	model.SetTemperature(0.5) // 少し創造性を抑えて正確性重視
+
+	// 画像データとテキストプロンプトを一緒に送る
+	resp, err := model.GenerateContent(ctx,
+		genai.ImageData(mimeType, imgData),
+		genai.Text(promptText),
+	)
+	if err != nil {
+		return "", fmt.Errorf("failed to generate from image: %w", err)
+	}
+
+	if len(resp.Candidates) == 0 || len(resp.Candidates[0].Content.Parts) == 0 {
+		return "", fmt.Errorf("no content generated")
+	}
+
+	var sb strings.Builder
+	for _, part := range resp.Candidates[0].Content.Parts {
+		if txt, ok := part.(genai.Text); ok {
+			sb.WriteString(string(txt))
+		}
+	}
+
+	return sb.String(), nil
+}
+
 // Close: アプリ終了時にクライアントを閉じます
 func (s *GeminiService) Close() {
 	if s.client != nil {
