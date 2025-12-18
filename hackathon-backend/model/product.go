@@ -12,6 +12,8 @@ type Product struct {
 	ImageURL    string    `json:"image_url"`
 	BuyerID     string    `json:"buyer_id"`
 	CreatedAt   time.Time `json:"created_at"`
+	LikeCount   int       `json:"like_count"`
+	IsLiked     bool      `json:"is_liked"`
 }
 
 type ProductReq struct {

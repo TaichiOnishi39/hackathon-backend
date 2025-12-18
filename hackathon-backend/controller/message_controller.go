@@ -40,7 +40,7 @@ func (c *MessageController) HandleSendMessage(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	msg, err := c.Usecase.SendMessage(firebaseUID, req.ReceiverID, req.Content)
+	msg, err := c.Usecase.SendMessage(firebaseUID, req.ReceiverID, req.Content, req.ProductID)
 	if err != nil {
 		c.respondError(w, http.StatusInternalServerError, err)
 		return

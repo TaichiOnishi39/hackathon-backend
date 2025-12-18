@@ -23,7 +23,7 @@ func (u *ProductPurchaseUsecase) PurchaseProduct(productID, firebaseUID string) 
 		return errors.New("user not found")
 	}
 
-	product, err := u.ProductDAO.FindByID(productID)
+	product, err := u.ProductDAO.FindByID(productID, user.ID)
 	if err != nil {
 		return err
 	}

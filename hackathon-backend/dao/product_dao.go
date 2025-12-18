@@ -31,59 +31,29 @@ func (d *ProductDao) Create(product *model.Product) error {
 	return err
 }
 
-func (d *ProductDao) FindAll() ([]*model.Product, error) {
+func (d *ProductDao) FindAll(currentUserID string) ([]*model.Product, error) {
 	query := `
 		SELECT 
-			p.id, 
-			p.name, 
-			p.price, 
-			p.description, 
-			p.user_id, 
-			COALESCE(p.image_url, ''),
-			p.created_at,
-			p.buyer_id,
-			u.name as user_name 
+			p.id, p.name, p.price, p.description, p.user_id, 
+			COALESCE(p.image_url, ''), p.created_at, p.buyer_id, u.name,
+			(SELECT COUNT(*) FROM likes WHERE product_id = p.id) as like_count,
+			EXISTS(SELECT 1 FROM likes WHERE product_id = p.id AND user_id = ?) as is_liked
 		FROM products p
 		JOIN users u ON p.user_id = u.id
 		ORDER BY p.created_at DESC
 	`
-	rows, err := d.db.Query(query)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	var products []*model.Product
-	for rows.Next() {
-		p := &model.Product{}
-		var buyerID sql.NullString // NULL対策
-		err := rows.Scan(&p.ID, &p.Name, &p.Price, &p.Description, &p.UserID, &p.ImageURL, &p.CreatedAt, &buyerID, &p.UserName)
-		if err != nil {
-			return nil, err
-		}
-		products = append(products, p)
-		if buyerID.Valid {
-			p.BuyerID = buyerID.String
-		}
-	}
-
-	return products, nil
+	return d.fetchProducts(query, currentUserID)
 }
 
-func (d *ProductDao) FindByName(keyword string) ([]*model.Product, error) {
+func (d *ProductDao) FindByName(keyword, currentUserID string) ([]*model.Product, error) {
 	// ユーザー名も取得したいのでJOINします
 	// WHERE p.name LIKE ? を追加
 	query := `
 		SELECT 
-			p.id, 
-			p.name, 
-			p.price, 
-			p.description, 
-			p.user_id,
-			COALESCE(p.image_url, ''),
-			p.created_at,
-			p.buyer_id,
-			u.name 
+			p.id, p.name, p.price, p.description, p.user_id,
+			COALESCE(p.image_url, ''), p.created_at, p.buyer_id, u.name,
+			(SELECT COUNT(*) FROM likes WHERE product_id = p.id) as like_count,
+			EXISTS(SELECT 1 FROM likes WHERE product_id = p.id AND user_id = ?) as is_liked
 		FROM products p
 		JOIN users u ON p.user_id = u.id
 		WHERE p.name LIKE ?
@@ -92,118 +62,80 @@ func (d *ProductDao) FindByName(keyword string) ([]*model.Product, error) {
 	// %keyword% の形にして部分一致にする
 	likeQuery := "%" + keyword + "%"
 
-	rows, err := d.db.Query(query, likeQuery)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	var products []*model.Product
-	for rows.Next() {
-		p := &model.Product{}
-		var buyerID sql.NullString
-		err := rows.Scan(
-			&p.ID, &p.Name, &p.Price, &p.Description, &p.UserID, &p.ImageURL, &p.CreatedAt, &buyerID, &p.UserName,
-		)
-		if err != nil {
-			return nil, err
-		}
-		if buyerID.Valid {
-			p.BuyerID = buyerID.String
-		}
-		products = append(products, p)
-	}
-	return products, nil
+	return d.fetchProducts(query, currentUserID, likeQuery)
 }
 
 // productIDで
-func (d *ProductDao) FindByID(productID string) (*model.Product, error) {
+func (d *ProductDao) FindByID(productID, currentUserID string) (*model.Product, error) {
 	query := `
 		SELECT 
-			p.id, 
-			p.name, 
-			p.price, 
-			p.description, 
-			p.user_id, 
-			COALESCE(p.image_url, ''), 
-			p.created_at,
-			p.buyer_id,  -- ★追加: 購入者情報
-			u.name 
+			p.id, p.name, p.price, p.description, p.user_id, 
+			COALESCE(p.image_url, ''), p.created_at, p.buyer_id, u.name,
+			(SELECT COUNT(*) FROM likes WHERE product_id = p.id) as like_count,
+			EXISTS(SELECT 1 FROM likes WHERE product_id = p.id AND user_id = ?) as is_liked
 		FROM products p
 		JOIN users u ON p.user_id = u.id
 		WHERE p.id = ?
 	`
-	// buyer_id は NULL の可能性があるので sql.NullString で受け取るのが安全ですが
-	// 今回はポインタか、あるいは NULL なら空文字にするなど工夫します。
-	// シンプルに Scan で *string に入れると NULL 対応できます。
-	var buyerID *string
-
-	p := &model.Product{}
-	err := d.db.QueryRow(query, productID).Scan(
-		&p.ID,
-		&p.Name,
-		&p.Price,
-		&p.Description,
-		&p.UserID,
-		&p.ImageURL,
-		&p.CreatedAt,
-		&buyerID, // NULL許容
-		&p.UserName,
-	)
-
+	var products []*model.Product
+	// fetchProductsを再利用（1件だけどリストとして取得）
+	products, err := d.fetchProducts(query, currentUserID, productID)
 	if err != nil {
 		return nil, err
 	}
-
-	// *string から string へ変換（NULLなら空文字）
-	if buyerID != nil {
-		p.BuyerID = *buyerID
+	if len(products) == 0 {
+		return nil, sql.ErrNoRows
 	}
-
-	return p, nil
+	return products[0], nil
 }
 
-// FindByUserID: 自分が【出品】した商品を取得
-func (d *ProductDao) FindByUserID(userID string) ([]*model.Product, error) {
+// FindByUserID: 特定のユーザーが出品した商品
+func (d *ProductDao) FindByUserID(targetUserID, currentUserID string) ([]*model.Product, error) {
 	query := `
 		SELECT 
 			p.id, p.name, p.price, p.description, p.user_id, 
-			COALESCE(p.image_url, ''), p.created_at, p.buyer_id, u.name 
+			COALESCE(p.image_url, ''), p.created_at, p.buyer_id, u.name,
+			(SELECT COUNT(*) FROM likes WHERE product_id = p.id) as like_count,
+			EXISTS(SELECT 1 FROM likes WHERE product_id = p.id AND user_id = ?) as is_liked
 		FROM products p
 		JOIN users u ON p.user_id = u.id
 		WHERE p.user_id = ?
 		ORDER BY p.created_at DESC
 	`
-	return d.fetchProducts(query, userID)
+	return d.fetchProducts(query, currentUserID, targetUserID)
 }
 
-// FindByBuyerID: 自分が【購入】した商品を取得
-func (d *ProductDao) FindByBuyerID(buyerID string) ([]*model.Product, error) {
+// FindByBuyerID:特定のユーザーが購入した商品
+func (d *ProductDao) FindByBuyerID(targetBuyerID, currentUserID string) ([]*model.Product, error) {
 	query := `
 		SELECT 
 			p.id, p.name, p.price, p.description, p.user_id, 
-			COALESCE(p.image_url, ''), p.created_at, p.buyer_id, u.name 
+			COALESCE(p.image_url, ''), p.created_at, p.buyer_id, u.name,
+			(SELECT COUNT(*) FROM likes WHERE product_id = p.id) as like_count,
+			EXISTS(SELECT 1 FROM likes WHERE product_id = p.id AND user_id = ?) as is_liked
 		FROM products p
 		JOIN users u ON p.user_id = u.id
 		WHERE p.buyer_id = ?
 		ORDER BY p.created_at DESC
 	`
-	return d.fetchProducts(query, buyerID)
+	return d.fetchProducts(query, currentUserID, targetBuyerID)
 }
 
-// FindLikedProducts: 自分が【いいね】した商品を取得
-func (d *ProductDao) FindLikedProducts(userID string) ([]*model.Product, error) {
+// FindLikedProducts: 特定のユーザーがいいねした商品
+func (d *ProductDao) FindLikedProducts(targetUserID, currentUserID string) ([]*model.Product, error) {
 	query := `
 		SELECT 
 			p.id, p.name, p.price, p.description, p.user_id, 
-			COALESCE(p.image_url, ''), p.created_at, p.buyer_id, u.name 
+			COALESCE(p.image_url, ''), p.created_at, p.buyer_id, u.name,
+			(SELECT COUNT(*) FROM likes WHERE product_id = p.id) as like_count,
+			EXISTS(SELECT 1 FROM likes WHERE product_id = p.id AND user_id = ?) as is_liked
 		FROM products p
 		JOIN users u ON p.user_id = u.id
-		JOIN likes l ON p.id = l.product_id  -- likesテーブルと結合
+		JOIN likes l ON p.id = l.product_id
 		WHERE l.user_id = ?
 		ORDER BY p.created_at DESC
 	`
-	return d.fetchProducts(query, userID)
+	return d.fetchProducts(query, currentUserID, targetUserID)
 }
 
 // 共通処理
@@ -220,7 +152,7 @@ func (d *ProductDao) fetchProducts(query string, args ...interface{}) ([]*model.
 		var buyerID sql.NullString
 		err := rows.Scan(
 			&p.ID, &p.Name, &p.Price, &p.Description, &p.UserID,
-			&p.ImageURL, &p.CreatedAt, &buyerID, &p.UserName,
+			&p.ImageURL, &p.CreatedAt, &buyerID, &p.UserName, &p.LikeCount, &p.IsLiked,
 		)
 		if err != nil {
 			return nil, err
@@ -299,7 +231,18 @@ func (d *ProductDao) Update(productID string, userID string, name string, price 
 		return err
 	}
 	if rowsAffected == 0 {
-		return sql.ErrNoRows // 対象なし（権限なし含む）
+		// 本当に存在しない（または権限がない）のか、値が変わらなかっただけなのかを確認
+		var exists int
+		checkQuery := "SELECT 1 FROM products WHERE id = ? AND user_id = ?"
+		err := d.db.QueryRow(checkQuery, productID, userID).Scan(&exists)
+
+		if err == sql.ErrNoRows {
+			return sql.ErrNoRows // 本当になかった
+		} else if err != nil {
+			return err // その他のエラー
+		}
+		// エラーがなければ「商品はあるけど変更なし」なので成功(nil)を返す
+		return nil
 	}
 
 	return nil

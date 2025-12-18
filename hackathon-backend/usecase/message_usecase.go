@@ -23,7 +23,7 @@ func NewMessageUsecase(mDAO *dao.MessageDao, uDAO *dao.UserDao) *MessageUsecase 
 }
 
 // SendMessage: メッセージを送信
-func (u *MessageUsecase) SendMessage(senderFirebaseUID, receiverID, content string) (*model.Message, error) {
+func (u *MessageUsecase) SendMessage(senderFirebaseUID, receiverID, content, productID string) (*model.Message, error) {
 	// 1. 送信者を特定
 	sender, err := u.UserDAO.FindByFirebaseUID(senderFirebaseUID)
 	if err != nil {
@@ -43,6 +43,7 @@ func (u *MessageUsecase) SendMessage(senderFirebaseUID, receiverID, content stri
 		SenderID:   sender.ID,
 		ReceiverID: receiverID,
 		Content:    content,
+		ProductID:  productID,
 		CreatedAt:  t,
 	}
 
