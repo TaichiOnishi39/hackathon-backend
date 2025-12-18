@@ -34,15 +34,9 @@ func (d *ProductDao) Create(product *model.Product) error {
 func (d *ProductDao) FindAll() ([]*model.Product, error) {
 	query := `
 		SELECT 
-			p.id, 
-			p.name, 
-			p.price, 
-			p.description, 
-			p.user_id, 
-			COALESCE(p.image_url, ''),
-			p.created_at,
-			p.buyer_id,
-			u.name as user_name 
+			p.id, p.name, p.price, p.description, p.user_id, 
+			COALESCE(p.image_url, ''), p.created_at, p.buyer_id, u.name,
+			(SELECT COUNT(*) FROM likes WHERE product_id = p.id) as like_count
 		FROM products p
 		JOIN users u ON p.user_id = u.id
 		ORDER BY p.created_at DESC
@@ -57,7 +51,7 @@ func (d *ProductDao) FindAll() ([]*model.Product, error) {
 	for rows.Next() {
 		p := &model.Product{}
 		var buyerID sql.NullString // NULL対策
-		err := rows.Scan(&p.ID, &p.Name, &p.Price, &p.Description, &p.UserID, &p.ImageURL, &p.CreatedAt, &buyerID, &p.UserName)
+		err := rows.Scan(&p.ID, &p.Name, &p.Price, &p.Description, &p.UserID, &p.ImageURL, &p.CreatedAt, &buyerID, &p.UserName, &p.LikeCount)
 		if err != nil {
 			return nil, err
 		}
@@ -75,15 +69,9 @@ func (d *ProductDao) FindByName(keyword string) ([]*model.Product, error) {
 	// WHERE p.name LIKE ? を追加
 	query := `
 		SELECT 
-			p.id, 
-			p.name, 
-			p.price, 
-			p.description, 
-			p.user_id,
-			COALESCE(p.image_url, ''),
-			p.created_at,
-			p.buyer_id,
-			u.name 
+			p.id, p.name, p.price, p.description, p.user_id,
+			COALESCE(p.image_url, ''), p.created_at, p.buyer_id, u.name,
+			(SELECT COUNT(*) FROM likes WHERE product_id = p.id) as like_count
 		FROM products p
 		JOIN users u ON p.user_id = u.id
 		WHERE p.name LIKE ?
@@ -103,7 +91,7 @@ func (d *ProductDao) FindByName(keyword string) ([]*model.Product, error) {
 		p := &model.Product{}
 		var buyerID sql.NullString
 		err := rows.Scan(
-			&p.ID, &p.Name, &p.Price, &p.Description, &p.UserID, &p.ImageURL, &p.CreatedAt, &buyerID, &p.UserName,
+			&p.ID, &p.Name, &p.Price, &p.Description, &p.UserID, &p.ImageURL, &p.CreatedAt, &buyerID, &p.UserName, &p.LikeCount,
 		)
 		if err != nil {
 			return nil, err
@@ -120,15 +108,9 @@ func (d *ProductDao) FindByName(keyword string) ([]*model.Product, error) {
 func (d *ProductDao) FindByID(productID string) (*model.Product, error) {
 	query := `
 		SELECT 
-			p.id, 
-			p.name, 
-			p.price, 
-			p.description, 
-			p.user_id, 
-			COALESCE(p.image_url, ''), 
-			p.created_at,
-			p.buyer_id,  -- ★追加: 購入者情報
-			u.name 
+			p.id, p.name, p.price, p.description, p.user_id, 
+			COALESCE(p.image_url, ''), p.created_at, p.buyer_id, u.name,
+			(SELECT COUNT(*) FROM likes WHERE product_id = p.id) as like_count
 		FROM products p
 		JOIN users u ON p.user_id = u.id
 		WHERE p.id = ?
@@ -149,6 +131,7 @@ func (d *ProductDao) FindByID(productID string) (*model.Product, error) {
 		&p.CreatedAt,
 		&buyerID, // NULL許容
 		&p.UserName,
+		&p.LikeCount,
 	)
 
 	if err != nil {
@@ -168,7 +151,8 @@ func (d *ProductDao) FindByUserID(userID string) ([]*model.Product, error) {
 	query := `
 		SELECT 
 			p.id, p.name, p.price, p.description, p.user_id, 
-			COALESCE(p.image_url, ''), p.created_at, p.buyer_id, u.name 
+			COALESCE(p.image_url, ''), p.created_at, p.buyer_id, u.name,
+			(SELECT COUNT(*) FROM likes WHERE product_id = p.id) as like_count
 		FROM products p
 		JOIN users u ON p.user_id = u.id
 		WHERE p.user_id = ?
@@ -182,7 +166,8 @@ func (d *ProductDao) FindByBuyerID(buyerID string) ([]*model.Product, error) {
 	query := `
 		SELECT 
 			p.id, p.name, p.price, p.description, p.user_id, 
-			COALESCE(p.image_url, ''), p.created_at, p.buyer_id, u.name 
+			COALESCE(p.image_url, ''), p.created_at, p.buyer_id, u.name,
+			(SELECT COUNT(*) FROM likes WHERE product_id = p.id) as like_count
 		FROM products p
 		JOIN users u ON p.user_id = u.id
 		WHERE p.buyer_id = ?
@@ -196,10 +181,11 @@ func (d *ProductDao) FindLikedProducts(userID string) ([]*model.Product, error) 
 	query := `
 		SELECT 
 			p.id, p.name, p.price, p.description, p.user_id, 
-			COALESCE(p.image_url, ''), p.created_at, p.buyer_id, u.name 
+			COALESCE(p.image_url, ''), p.created_at, p.buyer_id, u.name,
+			(SELECT COUNT(*) FROM likes WHERE product_id = p.id) as like_count
 		FROM products p
 		JOIN users u ON p.user_id = u.id
-		JOIN likes l ON p.id = l.product_id  -- likesテーブルと結合
+		JOIN likes l ON p.id = l.product_id
 		WHERE l.user_id = ?
 		ORDER BY p.created_at DESC
 	`
@@ -220,7 +206,7 @@ func (d *ProductDao) fetchProducts(query string, args ...interface{}) ([]*model.
 		var buyerID sql.NullString
 		err := rows.Scan(
 			&p.ID, &p.Name, &p.Price, &p.Description, &p.UserID,
-			&p.ImageURL, &p.CreatedAt, &buyerID, &p.UserName,
+			&p.ImageURL, &p.CreatedAt, &buyerID, &p.UserName, &p.LikeCount,
 		)
 		if err != nil {
 			return nil, err
