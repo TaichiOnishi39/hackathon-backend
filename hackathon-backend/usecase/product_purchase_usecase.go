@@ -22,5 +22,19 @@ func (u *ProductPurchaseUsecase) PurchaseProduct(productID, firebaseUID string) 
 	if user == nil {
 		return errors.New("user not found")
 	}
+
+	product, err := u.ProductDAO.FindByID(productID)
+	if err != nil {
+		return err
+	}
+	if product == nil {
+		return errors.New("product not found")
+	}
+	if product.UserID == user.ID {
+		return errors.New("cannot purchase your own product")
+	}
+	if product.BuyerID != "" {
+		return errors.New("product is already sold out")
+	}
 	return u.ProductDAO.UpdateBuyerID(productID, user.ID)
 }
