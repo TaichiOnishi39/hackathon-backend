@@ -16,6 +16,7 @@ type Message struct {
 type SendMessageReq struct {
 	ReceiverID string `json:"receiver_id"`
 	Content    string `json:"content"`
+	ProductID  string `json:"product_id"`
 }
 
 // ChatListRes: チャット一覧画面用のレスポンス
