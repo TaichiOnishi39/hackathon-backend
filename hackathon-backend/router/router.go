@@ -87,6 +87,24 @@ func NewRouter(
 		}
 	})
 
+	mux.HandleFunc("/users/{id}/products", func(w http.ResponseWriter, r *http.Request) {
+		if !enableCORS(w, r) {
+			return
+		}
+		if r.Method == http.MethodGet {
+			productSearchCtrl.HandleGetByUserID(w, r)
+		}
+	})
+	
+	mux.HandleFunc("/users/{id}", func(w http.ResponseWriter, r *http.Request) {
+		if !enableCORS(w, r) {
+			return
+		}
+		if r.Method == http.MethodGet {
+			searchUserCtrl.HandleGetUser(w, r)
+		}
+	})
+
 	// /products/{id}/purchase
 	mux.HandleFunc("/products/{id}/purchase", func(w http.ResponseWriter, r *http.Request) {
 		if !enableCORS(w, r) {

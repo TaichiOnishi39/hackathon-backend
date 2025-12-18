@@ -33,6 +33,19 @@ func (c *ProductSearchController) HandleListProducts(w http.ResponseWriter, r *h
 	c.respondJSON(w, http.StatusOK, products)
 }
 
+// GET /users/{id}/products (公開ユーザーページ用)
+func (c *ProductSearchController) HandleGetByUserID(w http.ResponseWriter, r *http.Request) {
+	// URLのパスパラメータからIDを取得
+	userID := r.PathValue("id")
+
+	products, err := c.Usecase.GetProductsByUserID(userID)
+	if err != nil {
+		c.respondError(w, http.StatusInternalServerError, err)
+		return
+	}
+	c.respondJSON(w, http.StatusOK, products)
+}
+
 // HandleGetSelling: GET /users/me/products (出品履歴)
 func (c *ProductSearchController) HandleGetSelling(w http.ResponseWriter, r *http.Request) {
 	firebaseUID, err := c.verifyToken(r)

@@ -20,3 +20,7 @@ func (u *SearchUserUsecase) SearchUser(name string) ([]model.UserRes, error) {
 func (u *SearchUserUsecase) GetUserByFirebaseUID(firebaseUID string) (*model.User, error) {
 	return u.UserDao.FindByFirebaseUID(firebaseUID)
 }
+
+func (u *SearchUserUsecase) GetUserByID(id string) (*model.User, error) {
+	return u.UserDao.FindByID(id)
+}
