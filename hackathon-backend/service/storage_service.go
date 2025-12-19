@@ -21,10 +21,9 @@ func NewStorageService(client *storage.Client, bucketName string) *StorageServic
 }
 
 // Upload は画像をGCSにアップロードし、保存されたファイル名（オブジェクト名）を返します
-func (s *StorageService) Upload(ctx context.Context, file io.Reader, filename string) (string, error) {
+func (s *StorageService) UploadImage(ctx context.Context, file io.Reader, filename string) (string, error) {
+	// 1. GCSにアップロード
 	wc := s.client.Bucket(s.bucketName).Object(filename).NewWriter(ctx)
-
-	// アップロード実行
 	if _, err := io.Copy(wc, file); err != nil {
 		return "", err
 	}
@@ -32,8 +31,11 @@ func (s *StorageService) Upload(ctx context.Context, file io.Reader, filename st
 		return "", err
 	}
 
-	// バケットが非公開なので、ファイル名だけを返す（後で署名付きURLを作るため）
-	return filename, nil
+	// 2. ★修正ポイント: 完全なURLを作成して返す
+	// 公開バケット前提のURL形式: https://storage.googleapis.com/[バケット名]/[ファイル名]
+	fullURL := fmt.Sprintf("https://storage.googleapis.com/%s/%s", s.bucketName, filename)
+
+	return fullURL, nil
 }
 
 // GenerateSignedURL は非公開の画像にアクセスするための「署名付きURL」を発行します

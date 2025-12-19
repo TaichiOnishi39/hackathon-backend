@@ -116,16 +116,19 @@ func (u *MessageUsecase) GetChatList(myFirebaseUID string) ([]*model.ChatListRes
 				continue
 			}
 			partnerName := "不明なユーザー"
+			partnerImageURL := ""
 			if partner != nil {
 				partnerName = partner.Name
+				partnerImageURL = partner.ImageURL
 			}
 
 			chatList = append(chatList, &model.ChatListRes{
-				PartnerID:   partnerID,
-				PartnerName: partnerName,
-				LastMessage: msg.Content,
-				LastTime:    msg.CreatedAt,
-				UnreadCount: unreadCounts[partnerID],
+				PartnerID:       partnerID,
+				PartnerName:     partnerName,
+				PartnerImageURL: partnerImageURL,
+				LastMessage:     msg.Content,
+				LastTime:        msg.CreatedAt,
+				UnreadCount:     unreadCounts[partnerID],
 			})
 
 			processedPartners[partnerID] = true

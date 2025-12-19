@@ -32,8 +32,6 @@ func NewRouter(
 		}
 
 		switch r.Method {
-		case http.MethodGet:
-			searchUserCtrl.HandleSearch(w, r)
 		case http.MethodPost:
 			registerUserCtrl.Handle(w, r)
 		default:

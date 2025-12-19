@@ -71,7 +71,7 @@ func main() {
 	productPurchaseUsecase := usecase.NewProductPurchaseUsecase(productDAO, userDAO)
 	messageUsecase := usecase.NewMessageUsecase(messageDAO, userDAO)
 	productLikeUsecase := usecase.NewProductLikeUsecase(likeDAO, userDAO)
-	userUpdateUsecase := usecase.NewUserUpdateUsecase(userDAO)
+	userUpdateUsecase := usecase.NewUserUpdateUsecase(userDAO, storageService)
 	productDescUsecase := usecase.NewProductDescriptionUsecase(geminiService)
 
 	//Controller
