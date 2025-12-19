@@ -34,19 +34,11 @@ func (u *ProductSearchUsecase) getInternalUserID(firebaseUID string) string {
 }
 
 // SearchProduct: 商品検索
-func (u *ProductSearchUsecase) SearchProduct(keyword string, viewerFirebaseUID string) ([]*model.Product, error) {
+func (u *ProductSearchUsecase) SearchProduct(keyword string, sortOrder string, status string, viewerFirebaseUID string) ([]*model.Product, error) {
 	// 見ている人のIDを特定
 	currentUserID := u.getInternalUserID(viewerFirebaseUID)
 
-	var products []*model.Product
-	var err error
-
-	// DAOには常に currentUserID を渡す
-	if keyword == "" {
-		products, err = u.ProductDAO.FindAll(currentUserID)
-	} else {
-		products, err = u.ProductDAO.FindByName(keyword, currentUserID)
-	}
+	products, err := u.ProductDAO.Search(keyword, sortOrder, status, currentUserID)
 
 	return u.processProducts(products, err)
 }

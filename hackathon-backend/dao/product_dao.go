@@ -31,23 +31,7 @@ func (d *ProductDao) Create(product *model.Product) error {
 	return err
 }
 
-func (d *ProductDao) FindAll(currentUserID string) ([]*model.Product, error) {
-	query := `
-		SELECT 
-			p.id, p.name, p.price, p.description, p.user_id, 
-			COALESCE(p.image_url, ''), p.created_at, p.buyer_id, u.name,
-			(SELECT COUNT(*) FROM likes WHERE product_id = p.id) as like_count,
-			EXISTS(SELECT 1 FROM likes WHERE product_id = p.id AND user_id = ?) as is_liked
-		FROM products p
-		JOIN users u ON p.user_id = u.id
-		ORDER BY p.created_at DESC
-	`
-	return d.fetchProducts(query, currentUserID)
-}
-
-func (d *ProductDao) FindByName(keyword, currentUserID string) ([]*model.Product, error) {
-	// ユーザー名も取得したいのでJOINします
-	// WHERE p.name LIKE ? を追加
+func (d *ProductDao) Search(keyword string, sortOrder string, status string, currentUserID string) ([]*model.Product, error) {
 	query := `
 		SELECT 
 			p.id, p.name, p.price, p.description, p.user_id,
@@ -56,13 +40,42 @@ func (d *ProductDao) FindByName(keyword, currentUserID string) ([]*model.Product
 			EXISTS(SELECT 1 FROM likes WHERE product_id = p.id AND user_id = ?) as is_liked
 		FROM products p
 		JOIN users u ON p.user_id = u.id
-		WHERE p.name LIKE ?
-		ORDER BY p.created_at DESC
+		WHERE 1=1 
 	`
-	// %keyword% の形にして部分一致にする
-	likeQuery := "%" + keyword + "%"
 
-	return d.fetchProducts(query, currentUserID, likeQuery)
+	var args []interface{}
+	args = append(args, currentUserID) // is_liked判定用
+
+	// キーワード検索
+	if keyword != "" {
+		query += " AND p.name LIKE ? "
+		args = append(args, "%"+keyword+"%")
+	}
+
+	// ステータス絞り込み
+	if status == "selling" {
+		query += " AND p.buyer_id IS NULL "
+	} else if status == "sold" {
+		query += " AND p.buyer_id IS NOT NULL "
+	}
+	// status == "all" または指定なしの場合は何もしない（全件表示）
+
+	// ソート順
+	switch sortOrder {
+	case "price_asc":
+		query += " ORDER BY p.price ASC "
+	case "price_desc":
+		query += " ORDER BY p.price DESC "
+	case "oldest":
+		query += " ORDER BY p.created_at ASC "
+	case "likes":
+		query += " ORDER BY like_count DESC, p.created_at DESC "
+	default:
+		// デフォルトは新しい順
+		query += " ORDER BY p.created_at DESC "
+	}
+
+	return d.fetchProducts(query, args...)
 }
 
 // productIDで

@@ -28,9 +28,11 @@ func (c *ProductSearchController) HandleListProducts(w http.ResponseWriter, r *h
 	}
 
 	keyword := r.URL.Query().Get("q")
+	sortOrder := r.URL.Query().Get("sort")
+	status := r.URL.Query().Get("status")
 
 	// ★引数に viewerID を追加して呼び出し
-	products, err := c.Usecase.SearchProduct(keyword, viewerID)
+	products, err := c.Usecase.SearchProduct(keyword, sortOrder, status, viewerID)
 	if err != nil {
 		c.respondError(w, http.StatusInternalServerError, err)
 		return
