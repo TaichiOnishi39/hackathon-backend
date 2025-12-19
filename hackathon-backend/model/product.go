@@ -16,6 +16,11 @@ type Product struct {
 	IsLiked     bool      `json:"is_liked"`
 }
 
+type ProductPage struct {
+	Products []*Product `json:"products"`
+	Total    int        `json:"total"`
+}
+
 type ProductReq struct {
 	Name        string `json:"name"`
 	Price       int    `json:"price"`
