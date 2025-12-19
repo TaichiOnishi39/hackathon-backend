@@ -3,6 +3,7 @@ package controller
 import (
 	"hackathon-backend/usecase"
 	"net/http"
+	"strconv"
 
 	"firebase.google.com/go/auth"
 )
@@ -28,9 +29,18 @@ func (c *ProductSearchController) HandleListProducts(w http.ResponseWriter, r *h
 	}
 
 	keyword := r.URL.Query().Get("q")
+	sortOrder := r.URL.Query().Get("sort")
+	status := r.URL.Query().Get("status")
+
+	pageStr := r.URL.Query().Get("page")
+	page, _ := strconv.Atoi(pageStr)
+	if page < 1 {
+		page = 1
+	}
+	limit := 20 // 1ページの件数
 
 	// ★引数に viewerID を追加して呼び出し
-	products, err := c.Usecase.SearchProduct(keyword, viewerID)
+	products, err := c.Usecase.SearchProduct(keyword, sortOrder, status, viewerID, page, limit)
 	if err != nil {
 		c.respondError(w, http.StatusInternalServerError, err)
 		return
@@ -49,9 +59,18 @@ func (c *ProductSearchController) HandleGetByUserID(w http.ResponseWriter, r *ht
 
 	// URLのパスパラメータからIDを取得
 	userID := r.PathValue("id")
+	sortOrder := r.URL.Query().Get("sort")
+	status := r.URL.Query().Get("status")
+
+	pageStr := r.URL.Query().Get("page")
+	page, _ := strconv.Atoi(pageStr)
+	if page < 1 {
+		page = 1
+	}
+	limit := 20
 
 	// ★引数に viewerID を追加
-	products, err := c.Usecase.GetProductsByUserID(userID, viewerID)
+	products, err := c.Usecase.GetProductsByUserID(userID, sortOrder, status, viewerID, page, limit)
 	if err != nil {
 		c.respondError(w, http.StatusInternalServerError, err)
 		return

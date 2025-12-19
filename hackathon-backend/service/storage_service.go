@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"strings"
 
 	"cloud.google.com/go/storage"
 )
@@ -40,14 +41,17 @@ func (s *StorageService) UploadImage(ctx context.Context, file io.Reader, filena
 
 // GenerateSignedURL は非公開の画像にアクセスするための「署名付きURL」を発行します
 func (s *StorageService) GenerateSignedURL(filename string) (string, error) {
-	// 署名付きURLの発行は、Cloud Runのデフォルト環境だと秘密鍵がないため失敗しやすいです。
-	// 代わりに、公開バケットのURLを返します。
-	// 形式: https://storage.googleapis.com/[バケット名]/[ファイル名]
-
 	if filename == "" {
 		return "", nil
 	}
 
+	// ★修正ポイント: すでに "https://" で始まっているなら、そのまま返す
+	// これにより、昔のデータ(ファイル名のみ)と新しいデータ(URL)の両方に対応できます
+	if strings.HasPrefix(filename, "https://") || strings.HasPrefix(filename, "http://") {
+		return filename, nil
+	}
+
+	// ファイル名だけの場合は、URLを組み立てて返す
 	url := fmt.Sprintf("https://storage.googleapis.com/%s/%s", s.bucketName, filename)
 	return url, nil
 }

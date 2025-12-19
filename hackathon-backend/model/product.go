@@ -14,6 +14,12 @@ type Product struct {
 	CreatedAt   time.Time `json:"created_at"`
 	LikeCount   int       `json:"like_count"`
 	IsLiked     bool      `json:"is_liked"`
+	BuyerName   string    `json:"buyer_name"`
+}
+
+type ProductPage struct {
+	Products []*Product `json:"products"`
+	Total    int        `json:"total"`
 }
 
 type ProductReq struct {
