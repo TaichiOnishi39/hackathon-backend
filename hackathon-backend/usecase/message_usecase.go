@@ -146,3 +146,12 @@ func (u *MessageUsecase) MarkAsRead(myFirebaseUID, partnerID string) error {
 	}
 	return u.MessageDAO.MarkAsRead(me.ID, partnerID)
 }
+
+func (u *MessageUsecase) UnsendMessage(messageID string) error {
+	// 必要であればここで「自分のメッセージか」のチェックを入れる
+	return u.MessageDAO.Unsend(messageID)
+}
+
+func (u *MessageUsecase) DeleteMessage(messageID string) error {
+	return u.MessageDAO.Delete(messageID)
+}

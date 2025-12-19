@@ -29,7 +29,7 @@ func (d *MessageDao) GetMessagesBetween(userA, userB string) ([]*model.Message, 
 	query := `
 	   SELECT 
            m.id, m.sender_id, m.receiver_id, m.content, m.created_at, 
-           m.product_id, p.name, m.is_read
+           m.product_id, p.name, m.is_read,m.is_deleted
        FROM messages m
        LEFT JOIN products p ON m.product_id = p.id
        WHERE (m.sender_id = ? AND m.receiver_id = ?) 
@@ -47,7 +47,7 @@ func (d *MessageDao) GetMessagesBetween(userA, userB string) ([]*model.Message, 
 		m := &model.Message{}
 		var productID sql.NullString
 		var productName sql.NullString
-		if err := rows.Scan(&m.ID, &m.SenderID, &m.ReceiverID, &m.Content, &m.CreatedAt, &productID, &productName, &m.IsRead); err != nil {
+		if err := rows.Scan(&m.ID, &m.SenderID, &m.ReceiverID, &m.Content, &m.CreatedAt, &productID, &productName, &m.IsRead, &m.IsDeleted); err != nil {
 			return nil, err
 		}
 
@@ -104,5 +104,18 @@ func (d *MessageDao) MarkAsRead(myUserID, partnerID string) error {
 	// 自分が受信者(Receiver)で、相手が送信者(Sender)のメッセージを既読(TRUE)にする
 	query := `UPDATE messages SET is_read = TRUE WHERE receiver_id = ? AND sender_id = ? AND is_read = FALSE`
 	_, err := d.db.Exec(query, myUserID, partnerID)
+	return err
+}
+
+func (d *MessageDao) Unsend(id string) error {
+	// 内容を空にしてフラグを立てる
+	query := `UPDATE messages SET is_deleted = TRUE, content = '' WHERE id = ?`
+	_, err := d.db.Exec(query, id)
+	return err
+}
+
+func (d *MessageDao) Delete(id string) error {
+	query := `DELETE FROM messages WHERE id = ?`
+	_, err := d.db.Exec(query, id)
 	return err
 }

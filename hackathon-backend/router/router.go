@@ -222,6 +222,28 @@ func NewRouter(
 		}
 	})
 
+	mux.HandleFunc("/messages/{id}/unsend", func(w http.ResponseWriter, r *http.Request) {
+		if !enableCORS(w, r) {
+			return
+		}
+		if r.Method == http.MethodPut {
+			messageCtrl.HandleUnsendMessage(w, r)
+		} else {
+			w.WriteHeader(http.StatusMethodNotAllowed)
+		}
+	})
+
+	mux.HandleFunc("/messages/{id}", func(w http.ResponseWriter, r *http.Request) {
+		if !enableCORS(w, r) {
+			return
+		}
+		if r.Method == http.MethodDelete {
+			messageCtrl.HandleDeleteMessage(w, r)
+		} else {
+			w.WriteHeader(http.StatusMethodNotAllowed)
+		}
+	})
+
 	return mux
 }
 
