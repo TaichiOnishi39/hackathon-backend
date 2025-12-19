@@ -134,7 +134,11 @@ func (d *ProductDao) FindByUserID(targetUserID, currentUserID string) ([]*model.
 	query := `
 		SELECT 
 			p.id, p.name, p.price, p.description, p.user_id, 
-			COALESCE(p.image_url, ''), p.created_at, p.buyer_id, u.name,COALESCE(u2.name, ''),
+			COALESCE(p.image_url, ''), p.created_at, p.buyer_id, 
+			u.name, 
+			COALESCE(u.image_url, ''),  -- ★追加
+			COALESCE(u2.name, ''),
+			COALESCE(u2.image_url, ''), -- ★追加
 			(SELECT COUNT(*) FROM likes WHERE product_id = p.id) as like_count,
 			EXISTS(SELECT 1 FROM likes WHERE product_id = p.id AND user_id = ?) as is_liked
 		FROM products p
@@ -151,7 +155,11 @@ func (d *ProductDao) FindByBuyerID(targetBuyerID, currentUserID string) ([]*mode
 	query := `
 		SELECT 
 			p.id, p.name, p.price, p.description, p.user_id, 
-			COALESCE(p.image_url, ''), p.created_at, p.buyer_id, u.name,COALESCE(u2.name, ''),
+			COALESCE(p.image_url, ''), p.created_at, p.buyer_id, 
+			u.name, 
+			COALESCE(u.image_url, ''),  -- ★追加
+			COALESCE(u2.name, ''),
+			COALESCE(u2.image_url, ''), -- ★追加
 			(SELECT COUNT(*) FROM likes WHERE product_id = p.id) as like_count,
 			EXISTS(SELECT 1 FROM likes WHERE product_id = p.id AND user_id = ?) as is_liked
 		FROM products p
@@ -168,7 +176,11 @@ func (d *ProductDao) FindLikedProducts(targetUserID, currentUserID string) ([]*m
 	query := `
 		SELECT 
 			p.id, p.name, p.price, p.description, p.user_id, 
-			COALESCE(p.image_url, ''), p.created_at, p.buyer_id, u.name,COALESCE(u2.name, ''),
+			COALESCE(p.image_url, ''), p.created_at, p.buyer_id, 
+			u.name, 
+			COALESCE(u.image_url, ''),  -- ★追加
+			COALESCE(u2.name, ''),
+			COALESCE(u2.image_url, ''), -- ★追加
 			(SELECT COUNT(*) FROM likes WHERE product_id = p.id) as like_count,
 			EXISTS(SELECT 1 FROM likes WHERE product_id = p.id AND user_id = ?) as is_liked
 		FROM products p
