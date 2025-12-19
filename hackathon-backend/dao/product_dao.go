@@ -31,55 +31,76 @@ func (d *ProductDao) Create(product *model.Product) error {
 	return err
 }
 
-func (d *ProductDao) Search(keyword string, sortOrder string, status string, currentUserID string, targetUserID string) ([]*model.Product, error) {
-	query := `
-		SELECT 
-			p.id, p.name, p.price, p.description, p.user_id,
-			COALESCE(p.image_url, ''), p.created_at, p.buyer_id, u.name,
-			(SELECT COUNT(*) FROM likes WHERE product_id = p.id) as like_count,
-			EXISTS(SELECT 1 FROM likes WHERE product_id = p.id AND user_id = ?) as is_liked
-		FROM products p
-		JOIN users u ON p.user_id = u.id
-		WHERE 1=1 
-	`
-
+// 共通の検索条件（WHERE句とARGS）を作成するヘルパー
+func (d *ProductDao) buildSearchCondition(keyword, status, targetUserID string) (string, []interface{}) {
+	query := ` FROM products p JOIN users u ON p.user_id = u.id WHERE 1=1 `
 	var args []interface{}
-	args = append(args, currentUserID)
 
-	// ★追加: 特定ユーザーの商品に絞る場合
 	if targetUserID != "" {
 		query += " AND p.user_id = ? "
 		args = append(args, targetUserID)
 	}
-
-	// キーワード検索
 	if keyword != "" {
 		query += " AND p.name LIKE ? "
 		args = append(args, "%"+keyword+"%")
 	}
-
-	// ステータス絞り込み (Selling / Sold)
 	if status == "selling" {
 		query += " AND p.buyer_id IS NULL "
 	} else if status == "sold" {
 		query += " AND p.buyer_id IS NOT NULL "
 	}
 
-	// ソート順
+	return query, args
+}
+
+func (d *ProductDao) Search(keyword, sortOrder, status, currentUserID, targetUserID string, limit, offset int) ([]*model.Product, error) {
+	// 1. 条件作成
+	whereQuery, args := d.buildSearchCondition(keyword, status, targetUserID)
+
+	// 2. SELECT句 (is_liked判定のために currentUserID を使う)
+	selectQuery := `
+		SELECT 
+			p.id, p.name, p.price, p.description, p.user_id,
+			COALESCE(p.image_url, ''), p.created_at, p.buyer_id, u.name,
+			(SELECT COUNT(*) FROM likes WHERE product_id = p.id) as like_count,
+			EXISTS(SELECT 1 FROM likes WHERE product_id = p.id AND user_id = ?) as is_liked
+	` + whereQuery
+
+	// argsの先頭に currentUserID を追加
+	finalArgs := append([]interface{}{currentUserID}, args...)
+
+	// 3. ソート順
 	switch sortOrder {
 	case "price_asc":
-		query += " ORDER BY p.price ASC "
+		selectQuery += " ORDER BY p.price ASC "
 	case "price_desc":
-		query += " ORDER BY p.price DESC "
+		selectQuery += " ORDER BY p.price DESC "
 	case "oldest":
-		query += " ORDER BY p.created_at ASC "
+		selectQuery += " ORDER BY p.created_at ASC "
 	case "likes":
-		query += " ORDER BY like_count DESC, p.created_at DESC "
+		selectQuery += " ORDER BY like_count DESC, p.created_at DESC "
 	default:
-		query += " ORDER BY p.created_at DESC "
+		selectQuery += " ORDER BY p.created_at DESC "
 	}
 
-	return d.fetchProducts(query, args...)
+	// 4. LIMIT / OFFSET 追加
+	selectQuery += " LIMIT ? OFFSET ? "
+	finalArgs = append(finalArgs, limit, offset)
+
+	return d.fetchProducts(selectQuery, finalArgs...)
+}
+
+func (d *ProductDao) SearchCount(keyword, status, targetUserID string) (int, error) {
+	whereQuery, args := d.buildSearchCondition(keyword, status, targetUserID)
+
+	query := `SELECT COUNT(*) ` + whereQuery
+
+	var count int
+	err := d.db.QueryRow(query, args...).Scan(&count)
+	if err != nil {
+		return 0, err
+	}
+	return count, nil
 }
 
 // productIDで

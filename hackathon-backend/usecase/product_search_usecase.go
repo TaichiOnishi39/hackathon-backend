@@ -34,19 +34,59 @@ func (u *ProductSearchUsecase) getInternalUserID(firebaseUID string) string {
 }
 
 // SearchProduct: 商品検索
-func (u *ProductSearchUsecase) SearchProduct(keyword string, sortOrder string, status string, viewerFirebaseUID string) ([]*model.Product, error) {
-	// 見ている人のIDを特定
+func (u *ProductSearchUsecase) SearchProduct(keyword, sortOrder, status, viewerFirebaseUID string, page, limit int) (*model.ProductPage, error) {
 	currentUserID := u.getInternalUserID(viewerFirebaseUID)
 
-	products, err := u.ProductDAO.Search(keyword, sortOrder, status, currentUserID, "")
+	// ページ番号の補正
+	if page < 1 {
+		page = 1
+	}
+	if limit < 1 {
+		limit = 20
+	}
+	offset := (page - 1) * limit
 
-	return u.processProducts(products, err)
+	// 1. データ取得
+	products, err := u.ProductDAO.Search(keyword, sortOrder, status, currentUserID, "", limit, offset)
+	if err != nil {
+		return nil, err
+	}
+	// 画像URL処理
+	products, _ = u.processProducts(products, nil)
+
+	// 2. 件数取得
+	total, err := u.ProductDAO.SearchCount(keyword, status, "")
+	if err != nil {
+		return nil, err
+	}
+
+	return &model.ProductPage{Products: products, Total: total}, nil
 }
 
 // GetProductsByUserID: 特定のユーザーの商品一覧
-func (u *ProductSearchUsecase) GetProductsByUserID(targetUserID string, sortOrder string, status string, viewerFirebaseUID string) ([]*model.Product, error) {
+func (u *ProductSearchUsecase) GetProductsByUserID(targetUserID, sortOrder, status, viewerFirebaseUID string, page, limit int) (*model.ProductPage, error) {
 	currentUserID := u.getInternalUserID(viewerFirebaseUID)
-	return u.processProducts(u.ProductDAO.Search("", sortOrder, status, currentUserID, targetUserID))
+
+	if page < 1 {
+		page = 1
+	}
+	if limit < 1 {
+		limit = 20
+	}
+	offset := (page - 1) * limit
+
+	products, err := u.ProductDAO.Search("", sortOrder, status, currentUserID, targetUserID, limit, offset)
+	if err != nil {
+		return nil, err
+	}
+	products, _ = u.processProducts(products, nil)
+
+	total, err := u.ProductDAO.SearchCount("", status, targetUserID)
+	if err != nil {
+		return nil, err
+	}
+
+	return &model.ProductPage{Products: products, Total: total}, nil
 }
 
 // GetSellingProducts: 出品している商品 (targetFirebaseUID: 出品者, viewerFirebaseUID: 見ている人)
