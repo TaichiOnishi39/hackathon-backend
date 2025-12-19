@@ -15,30 +15,12 @@ func NewUserDao(db *sql.DB) *UserDao {
 	return &UserDao{db: db}
 }
 
-func (dao *UserDao) FindByName(name string) ([]model.UserRes, error) {
-	rows, err := dao.db.Query("SELECT id, name, firebase_uid　FROM users WHERE name = ?", name)
-	if err != nil {
-		return nil, fmt.Errorf("fail: db.Query, %v", err)
-	}
-	defer rows.Close()
-
-	users := make([]model.UserRes, 0)
-	for rows.Next() {
-		var u model.UserRes
-		if err := rows.Scan(&u.ID, &u.Name, &u.FirebaseUID); err != nil {
-			return nil, fmt.Errorf("fail: rows.Scan, %v", err)
-		}
-		users = append(users, u)
-	}
-	return users, nil
-}
-
 func (dao *UserDao) FindByFirebaseUID(firebaseUID string) (*model.User, error) {
 	var user model.User
 	// 1件だけ取得するので QueryRow を使います
-	row := dao.db.QueryRow("SELECT id, name, firebase_uid, COALESCE(bio, '') FROM users WHERE firebase_uid = ?", firebaseUID)
+	row := dao.db.QueryRow("SELECT id, name, firebase_uid, COALESCE(bio, ''), COALESCE(image_url, '') FROM users WHERE firebase_uid = ?", firebaseUID)
 
-	if err := row.Scan(&user.ID, &user.Name, &user.FirebaseUID, &user.Bio); err != nil {
+	if err := row.Scan(&user.ID, &user.Name, &user.FirebaseUID, &user.Bio, &user.ImageURL); err != nil {
 		if err == sql.ErrNoRows {
 			// ユーザーが見つからない場合は nil, nil を返す設計にします
 			// (呼び出し元の Usecase や Controller で 404 エラーにするため)
@@ -53,8 +35,8 @@ func (dao *UserDao) FindByFirebaseUID(firebaseUID string) (*model.User, error) {
 
 func (dao *UserDao) FindByID(id string) (*model.User, error) {
 	var user model.User
-	row := dao.db.QueryRow("SELECT id, name, firebase_uid, COALESCE(bio, '') FROM users WHERE id = ?", id)
-	if err := row.Scan(&user.ID, &user.Name, &user.FirebaseUID, &user.Bio); err != nil {
+	row := dao.db.QueryRow("SELECT id, name, firebase_uid, COALESCE(bio, ''), COALESCE(image_url, '') FROM users WHERE id = ?", id)
+	if err := row.Scan(&user.ID, &user.Name, &user.FirebaseUID, &user.Bio, &user.ImageURL); err != nil {
 		if err == sql.ErrNoRows {
 			return nil, nil
 		}
@@ -83,8 +65,8 @@ func (dao *UserDao) CreateOrUpdate(ulid string, firebaseUID string, name string)
 
 	// 確定したユーザー情報を取得して返す
 	var user model.User
-	err = tx.QueryRow("SELECT id, name, firebase_uid, COALESCE(bio, '') FROM users WHERE firebase_uid = ?", firebaseUID).
-		Scan(&user.ID, &user.Name, &user.FirebaseUID, &user.Bio)
+	err = tx.QueryRow("SELECT id, name, firebase_uid, COALESCE(bio, ''), COALESCE(image_url, '') FROM users WHERE firebase_uid = ?", firebaseUID).
+		Scan(&user.ID, &user.Name, &user.FirebaseUID, &user.Bio, &user.ImageURL)
 	if err != nil {
 		return nil, fmt.Errorf("fail: tx.QueryRow, %v", err)
 	}
@@ -97,7 +79,7 @@ func (dao *UserDao) CreateOrUpdate(ulid string, firebaseUID string, name string)
 }
 
 func (dao *UserDao) Update(user *model.User) error {
-	query := `UPDATE users SET name = ?, bio = ? WHERE id = ?`
-	_, err := dao.db.Exec(query, user.Name, user.Bio, user.ID)
+	query := `UPDATE users SET name = ?, bio = ?, image_url = ? WHERE id = ?`
+	_, err := dao.db.Exec(query, user.Name, user.Bio, user.ImageURL, user.ID)
 	return err
 }

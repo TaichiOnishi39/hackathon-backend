@@ -3,7 +3,6 @@ package controller
 import (
 	"fmt"
 	"hackathon-backend/usecase"
-	"log"
 	"net/http"
 
 	"firebase.google.com/go/auth"
@@ -19,23 +18,6 @@ func NewSearchUserController(u *usecase.SearchUserUsecase, auth *auth.Client) *S
 		BaseController: BaseController{AuthClient: auth},
 		Usecase:        u,
 	}
-}
-
-func (c *SearchUserController) HandleSearch(w http.ResponseWriter, r *http.Request) {
-	name := r.URL.Query().Get("name")
-	if name == "" {
-		log.Println("fail: name is empty")
-		w.WriteHeader(http.StatusBadRequest)
-		return
-	}
-
-	users, err := c.Usecase.SearchUser(name)
-	if err != nil {
-		c.respondError(w, http.StatusInternalServerError, err)
-		return
-	}
-
-	c.respondJSON(w, http.StatusOK, users)
 }
 
 func (c *SearchUserController) HandleGetMe(w http.ResponseWriter, r *http.Request) {

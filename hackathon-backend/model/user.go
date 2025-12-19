@@ -10,6 +10,7 @@ type User struct {
 	Name        string `json:"name"`
 	FirebaseUID string `json:"firebase_uid"`
 	Bio         string `json:"bio"`
+	ImageURL    string `json:"image_url"`
 }
 type CreateUserReq struct {
 	Name string `json:"name"`
