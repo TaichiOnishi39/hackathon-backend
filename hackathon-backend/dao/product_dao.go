@@ -31,7 +31,7 @@ func (d *ProductDao) Create(product *model.Product) error {
 	return err
 }
 
-func (d *ProductDao) Search(keyword string, sortOrder string, status string, currentUserID string) ([]*model.Product, error) {
+func (d *ProductDao) Search(keyword string, sortOrder string, status string, currentUserID string, targetUserID string) ([]*model.Product, error) {
 	query := `
 		SELECT 
 			p.id, p.name, p.price, p.description, p.user_id,
@@ -44,7 +44,13 @@ func (d *ProductDao) Search(keyword string, sortOrder string, status string, cur
 	`
 
 	var args []interface{}
-	args = append(args, currentUserID) // is_liked判定用
+	args = append(args, currentUserID)
+
+	// ★追加: 特定ユーザーの商品に絞る場合
+	if targetUserID != "" {
+		query += " AND p.user_id = ? "
+		args = append(args, targetUserID)
+	}
 
 	// キーワード検索
 	if keyword != "" {
@@ -52,13 +58,12 @@ func (d *ProductDao) Search(keyword string, sortOrder string, status string, cur
 		args = append(args, "%"+keyword+"%")
 	}
 
-	// ステータス絞り込み
+	// ステータス絞り込み (Selling / Sold)
 	if status == "selling" {
 		query += " AND p.buyer_id IS NULL "
 	} else if status == "sold" {
 		query += " AND p.buyer_id IS NOT NULL "
 	}
-	// status == "all" または指定なしの場合は何もしない（全件表示）
 
 	// ソート順
 	switch sortOrder {
@@ -71,7 +76,6 @@ func (d *ProductDao) Search(keyword string, sortOrder string, status string, cur
 	case "likes":
 		query += " ORDER BY like_count DESC, p.created_at DESC "
 	default:
-		// デフォルトは新しい順
 		query += " ORDER BY p.created_at DESC "
 	}
 

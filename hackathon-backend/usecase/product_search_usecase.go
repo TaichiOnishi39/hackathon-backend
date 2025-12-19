@@ -38,15 +38,15 @@ func (u *ProductSearchUsecase) SearchProduct(keyword string, sortOrder string, s
 	// 見ている人のIDを特定
 	currentUserID := u.getInternalUserID(viewerFirebaseUID)
 
-	products, err := u.ProductDAO.Search(keyword, sortOrder, status, currentUserID)
+	products, err := u.ProductDAO.Search(keyword, sortOrder, status, currentUserID, "")
 
 	return u.processProducts(products, err)
 }
 
 // GetProductsByUserID: 特定のユーザーの商品一覧
-func (u *ProductSearchUsecase) GetProductsByUserID(targetUserID string, viewerFirebaseUID string) ([]*model.Product, error) {
+func (u *ProductSearchUsecase) GetProductsByUserID(targetUserID string, sortOrder string, status string, viewerFirebaseUID string) ([]*model.Product, error) {
 	currentUserID := u.getInternalUserID(viewerFirebaseUID)
-	return u.processProducts(u.ProductDAO.FindByUserID(targetUserID, currentUserID))
+	return u.processProducts(u.ProductDAO.Search("", sortOrder, status, currentUserID, targetUserID))
 }
 
 // GetSellingProducts: 出品している商品 (targetFirebaseUID: 出品者, viewerFirebaseUID: 見ている人)

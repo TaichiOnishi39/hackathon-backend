@@ -51,9 +51,11 @@ func (c *ProductSearchController) HandleGetByUserID(w http.ResponseWriter, r *ht
 
 	// URLのパスパラメータからIDを取得
 	userID := r.PathValue("id")
+	sortOrder := r.URL.Query().Get("sort")
+	status := r.URL.Query().Get("status")
 
 	// ★引数に viewerID を追加
-	products, err := c.Usecase.GetProductsByUserID(userID, viewerID)
+	products, err := c.Usecase.GetProductsByUserID(userID, sortOrder, status, viewerID)
 	if err != nil {
 		c.respondError(w, http.StatusInternalServerError, err)
 		return
