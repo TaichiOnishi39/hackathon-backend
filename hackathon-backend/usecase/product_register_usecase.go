@@ -55,7 +55,7 @@ func (u *ProductRegisterUsecase) RegisterProduct(firebaseUID, name, description 
 	uploadPath := "products/" + productID + "_" + imageFilename
 
 	ctx := context.Background()
-	path, err := u.StorageService.Upload(ctx, imageFile, uploadPath)
+	path, err := u.StorageService.UploadImage(ctx, imageFile, uploadPath)
 	if err != nil {
 		return nil, err
 	}

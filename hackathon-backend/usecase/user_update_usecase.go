@@ -40,7 +40,7 @@ func (u *UserUpdateUsecase) UpdateUser(ctx context.Context, firebaseUID, name, b
 		defer file.Close()
 
 		// StorageServiceを使ってアップロード
-		imageURL, err := u.StorageService.Upload(ctx, file, imageFile.Filename)
+		imageURL, err := u.StorageService.UploadImage(ctx, file, imageFile.Filename)
 		if err != nil {
 			return nil, err
 		}
