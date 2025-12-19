@@ -3,18 +3,20 @@ package model
 import "time"
 
 type Product struct {
-	ID          string    `json:"id"`
-	Name        string    `json:"name"`
-	Price       int       `json:"price"`
-	Description string    `json:"description"`
-	UserID      string    `json:"user_id"` // ここは User の ID を入れる
-	UserName    string    `json:"user_name"`
-	ImageURL    string    `json:"image_url"`
-	BuyerID     string    `json:"buyer_id"`
-	CreatedAt   time.Time `json:"created_at"`
-	LikeCount   int       `json:"like_count"`
-	IsLiked     bool      `json:"is_liked"`
-	BuyerName   string    `json:"buyer_name"`
+	ID            string    `json:"id"`
+	Name          string    `json:"name"`
+	Price         int       `json:"price"`
+	Description   string    `json:"description"`
+	UserID        string    `json:"user_id"` // ここは User の ID を入れる
+	UserName      string    `json:"user_name"`
+	ImageURL      string    `json:"image_url"`
+	BuyerID       string    `json:"buyer_id"`
+	CreatedAt     time.Time `json:"created_at"`
+	LikeCount     int       `json:"like_count"`
+	IsLiked       bool      `json:"is_liked"`
+	BuyerName     string    `json:"buyer_name"`
+	UserImageURL  string    `json:"user_image_url"`
+	BuyerImageURL string    `json:"buyer_image_url"`
 }
 
 type ProductPage struct {

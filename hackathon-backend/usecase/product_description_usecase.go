@@ -35,7 +35,6 @@ func (u *ProductDescriptionUsecase) Generate(ctx context.Context, name, keywords
 - 商品の状態や魅力が伝わるようにする
 - 丁寧語（です・ます調）を使う
 - 200文字以内で簡潔にまとめる
-- ハッシュタグを含める
 
 【重要：出力形式】
 - 生成された説明文のみを出力してください。

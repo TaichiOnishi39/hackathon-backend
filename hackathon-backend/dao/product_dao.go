@@ -65,7 +65,9 @@ func (d *ProductDao) Search(keyword, sortOrder, status, currentUserID, targetUse
 			p.id, p.name, p.price, p.description, p.user_id,
 			COALESCE(p.image_url, ''), p.created_at, p.buyer_id, 
 			u.name, 
-			COALESCE(u2.name, ''), -- ★追加: 購入者名(なければ空文字)
+			COALESCE(u.image_url, ''),   
+			COALESCE(u2.name, ''),
+			COALESCE(u2.image_url, ''),
 			(SELECT COUNT(*) FROM likes WHERE product_id = p.id) as like_count,
 			EXISTS(SELECT 1 FROM likes WHERE product_id = p.id AND user_id = ?) as is_liked
 	` + whereQuery
@@ -107,7 +109,9 @@ func (d *ProductDao) FindByID(productID, currentUserID string) (*model.Product, 
 			p.id, p.name, p.price, p.description, p.user_id, 
 			COALESCE(p.image_url, ''), p.created_at, p.buyer_id, 
 			u.name, 
-			COALESCE(u2.name, ''), -- ★追加
+			COALESCE(u.image_url, ''),   
+			COALESCE(u2.name, ''),
+			COALESCE(u2.image_url, ''),
 			(SELECT COUNT(*) FROM likes WHERE product_id = p.id) as like_count,
 			EXISTS(SELECT 1 FROM likes WHERE product_id = p.id AND user_id = ?) as is_liked
 		FROM products p
@@ -130,7 +134,11 @@ func (d *ProductDao) FindByUserID(targetUserID, currentUserID string) ([]*model.
 	query := `
 		SELECT 
 			p.id, p.name, p.price, p.description, p.user_id, 
-			COALESCE(p.image_url, ''), p.created_at, p.buyer_id, u.name,COALESCE(u2.name, ''),
+			COALESCE(p.image_url, ''), p.created_at, p.buyer_id, 
+			u.name, 
+			COALESCE(u.image_url, ''),  -- ★追加
+			COALESCE(u2.name, ''),
+			COALESCE(u2.image_url, ''), -- ★追加
 			(SELECT COUNT(*) FROM likes WHERE product_id = p.id) as like_count,
 			EXISTS(SELECT 1 FROM likes WHERE product_id = p.id AND user_id = ?) as is_liked
 		FROM products p
@@ -147,7 +155,11 @@ func (d *ProductDao) FindByBuyerID(targetBuyerID, currentUserID string) ([]*mode
 	query := `
 		SELECT 
 			p.id, p.name, p.price, p.description, p.user_id, 
-			COALESCE(p.image_url, ''), p.created_at, p.buyer_id, u.name,COALESCE(u2.name, ''),
+			COALESCE(p.image_url, ''), p.created_at, p.buyer_id, 
+			u.name, 
+			COALESCE(u.image_url, ''),  -- ★追加
+			COALESCE(u2.name, ''),
+			COALESCE(u2.image_url, ''), -- ★追加
 			(SELECT COUNT(*) FROM likes WHERE product_id = p.id) as like_count,
 			EXISTS(SELECT 1 FROM likes WHERE product_id = p.id AND user_id = ?) as is_liked
 		FROM products p
@@ -164,7 +176,11 @@ func (d *ProductDao) FindLikedProducts(targetUserID, currentUserID string) ([]*m
 	query := `
 		SELECT 
 			p.id, p.name, p.price, p.description, p.user_id, 
-			COALESCE(p.image_url, ''), p.created_at, p.buyer_id, u.name,COALESCE(u2.name, ''),
+			COALESCE(p.image_url, ''), p.created_at, p.buyer_id, 
+			u.name, 
+			COALESCE(u.image_url, ''),  -- ★追加
+			COALESCE(u2.name, ''),
+			COALESCE(u2.image_url, ''), -- ★追加
 			(SELECT COUNT(*) FROM likes WHERE product_id = p.id) as like_count,
 			EXISTS(SELECT 1 FROM likes WHERE product_id = p.id AND user_id = ?) as is_liked
 		FROM products p
@@ -195,7 +211,9 @@ func (d *ProductDao) fetchProducts(query string, args ...interface{}) ([]*model.
 			&p.ID, &p.Name, &p.Price, &p.Description, &p.UserID,
 			&p.ImageURL, &p.CreatedAt, &buyerID,
 			&p.UserName,
-			&p.BuyerName, // ★追加
+			&p.UserImageURL,
+			&p.BuyerName,
+			&p.BuyerImageURL,
 			&p.LikeCount, &p.IsLiked,
 		)
 		if err != nil {
