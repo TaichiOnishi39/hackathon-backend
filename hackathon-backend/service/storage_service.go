@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io"
 	"strings"
-	"time"
 
 	"cloud.google.com/go/storage"
 )
@@ -41,28 +40,18 @@ func (s *StorageService) UploadImage(ctx context.Context, file io.Reader, filena
 }
 
 // GenerateSignedURL は非公開の画像にアクセスするための「署名付きURL」を発行します
-func (s *StorageService) GenerateSignedURL(objectName string) (string, error) {
-	if objectName == "" {
+func (s *StorageService) GenerateSignedURL(filename string) (string, error) {
+	if filename == "" {
 		return "", nil
 	}
 
-	// ★修正: もし "https://storage.googleapis.com/バケット名/" で始まっていたら、そこを取り除く
-	// これにより、ファイル名だけのデータも、フルURLのデータも両方扱えるようになります
-	prefix := fmt.Sprintf("https://storage.googleapis.com/%s/", s.bucketName)
-	if strings.HasPrefix(objectName, prefix) {
-		objectName = strings.TrimPrefix(objectName, prefix)
+	// ★修正ポイント: すでに "https://" で始まっているなら、そのまま返す
+	// これにより、昔のデータ(ファイル名のみ)と新しいデータ(URL)の両方に対応できます
+	if strings.HasPrefix(filename, "https://") || strings.HasPrefix(filename, "http://") {
+		return filename, nil
 	}
 
-	opts := &storage.SignedURLOptions{
-		Scheme:  storage.SigningSchemeV4,
-		Method:  "GET",
-		Expires: time.Now().Add(15 * time.Minute),
-	}
-
-	u, err := s.client.Bucket(s.bucketName).SignedURL(objectName, opts)
-	if err != nil {
-		return "", err
-	}
-
-	return u, nil
+	// ファイル名だけの場合は、URLを組み立てて返す
+	url := fmt.Sprintf("https://storage.googleapis.com/%s/%s", s.bucketName, filename)
+	return url, nil
 }
