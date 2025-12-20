@@ -110,3 +110,45 @@ func (c *MessageController) HandleMarkAsRead(w http.ResponseWriter, r *http.Requ
 
 	c.respondJSON(w, http.StatusOK, map[string]string{"status": "ok"})
 }
+
+func (c *MessageController) HandleUnsendMessage(w http.ResponseWriter, r *http.Request) {
+	_, err := c.verifyToken(r) // 認証確認
+	if err != nil {
+		c.respondError(w, http.StatusUnauthorized, err)
+		return
+	}
+
+	messageID := r.PathValue("id")
+	if messageID == "" {
+		c.respondError(w, http.StatusBadRequest, nil)
+		return
+	}
+
+	if err := c.Usecase.UnsendMessage(messageID); err != nil {
+		c.respondError(w, http.StatusInternalServerError, err)
+		return
+	}
+
+	c.respondJSON(w, http.StatusOK, map[string]string{"status": "unsent"})
+}
+
+func (c *MessageController) HandleDeleteMessage(w http.ResponseWriter, r *http.Request) {
+	_, err := c.verifyToken(r)
+	if err != nil {
+		c.respondError(w, http.StatusUnauthorized, err)
+		return
+	}
+
+	messageID := r.PathValue("id")
+	if messageID == "" {
+		c.respondError(w, http.StatusBadRequest, nil)
+		return
+	}
+
+	if err := c.Usecase.DeleteMessage(messageID); err != nil {
+		c.respondError(w, http.StatusInternalServerError, err)
+		return
+	}
+
+	c.respondJSON(w, http.StatusOK, map[string]string{"status": "deleted"})
+}

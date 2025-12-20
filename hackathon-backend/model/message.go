@@ -10,6 +10,7 @@ type Message struct {
 	ProductID   string    `json:"product_id,omitempty"`
 	ProductName string    `json:"product_name,omitempty"`
 	IsRead      bool      `json:"is_read"`
+	IsDeleted   bool      `json:"is_deleted"`
 	CreatedAt   time.Time `json:"created_at"`
 }
 
